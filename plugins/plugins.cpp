@@ -1871,6 +1871,7 @@ static void initStatic__EnigmaCurry()
       p->addModel(modelLatch);
       p->addModel(modelPulse);
       p->addModel(modelRange);
+      p->addModel(modelNegativeHarmony);
 #undef modelPulse
     }
 }
