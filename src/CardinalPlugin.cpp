@@ -316,15 +316,6 @@ public:
             context->scene->rackScroll->reset();
         }
 
-      #ifdef DISTRHO_OS_WASM
-        // switch factory template to regular one after first load
-       #if CARDINAL_VARIANT_MINI
-        context->patch->factoryTemplatePath = rack::system::join(rack::asset::patchesPath(), "templates/mini.vcv");
-       #else
-        context->patch->factoryTemplatePath = rack::system::join(rack::asset::patchesPath(), "templates/main.vcv");
-       #endif
-      #endif
-
        #ifdef CARDINAL_INIT_OSC_THREAD
         fInitializer->remotePluginInstance = this;
        #endif
@@ -426,7 +417,7 @@ protected:
 
     uint32_t getVersion() const override
     {
-        return d_version(0, 23, 8);
+        return d_version(0, 23, 9);
     }
 
     int64_t getUniqueId() const override
