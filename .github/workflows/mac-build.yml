@@ -1,0 +1,96 @@
+name: mac-build
+
+on: [push, pull_request]
+
+env:
+  CACHE_VERSION: 4
+  CARDINAL_UNDER_WINE: 1
+  CIBUILD: true
+  EMSCRIPTEN_VERSION: 3.1.27
+  LIBGL_ALWAYS_SOFTWARE: true
+  PAWPAW_SKIP_LTO: 1
+  PAWPAW_SKIP_GLIB: 1
+  PAWPAW_SKIP_LV2: 1
+  PAWPAW_SKIP_SAMPLERATE: 1
+
+jobs:
+  macos:
+    strategy:
+      matrix:
+        target: [universal-10.15]
+    runs-on: macos-11
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up cache
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/PawPawBuilds
+            src/Rack/dep/bin
+            src/Rack/dep/include
+            src/Rack/dep/lib
+            src/Rack/dep/share
+            src/Rack/dep/jansson-2.12
+            src/Rack/dep/libarchive-3.4.3
+            src/Rack/dep/libsamplerate-0.1.9
+            src/Rack/dep/zstd-1.4.5
+          key: macos-${{ matrix.target }}-v${{ env.CACHE_VERSION }}
+      - name: Setup dependencies
+        run: |
+          brew install autoconf automake meson
+      - name: Build extra dependencies
+        run: |
+          export PATH="/usr/local/opt/ccache/libexec:${PATH}"
+          ./deps/PawPaw/bootstrap-cardinal.sh macos-${{ matrix.target }} && ./deps/PawPaw/.cleanup.sh macos-${{ matrix.target }}
+      - name: Set up ccache
+        if: steps.cache.outputs.cache-hit == 'true'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ccache-macos-${{ matrix.target }}-v${{ env.CACHE_VERSION }}
+      - name: Build macOS (base)
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          export PATH="/usr/local/opt/ccache/libexec:${PATH}"
+          source deps/PawPaw/local.env macos-${{ matrix.target }}
+          make features
+          make NOOPT=true -j $(sysctl -n hw.logicalcpu)
+      - name: Build macOS (AU using juce)
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          export PATH="/usr/local/opt/ccache/libexec:${PATH}"
+          source deps/PawPaw/local.env macos-${{ matrix.target }}
+          mkdir -p jucewrapper/build
+          pushd jucewrapper/build; cmake -DCMAKE_BUILD_TYPE=Release .. && make VERBOSE=1 -j $(sysctl -n hw.logicalcpu); popd
+          mv jucewrapper/build/*_artefacts/Release/AU/*.component bin/
+      - name: Build macOS (packaging)
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          source deps/PawPaw/local.env macos-${{ matrix.target }}
+          ./utils/create-macos-installer.sh
+      - name: Set sha8 (non-release)
+        if: startsWith(github.ref, 'refs/tags/') != true
+        run: echo "SHA8=$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_ENV
+      - name: Set sha8 (release)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "SHA8=$(echo ${{ github.ref_name }})" >> $GITHUB_ENV
+      - name: Rename macOS bundle
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          mv ${{ github.event.repository.name }}-macOS.pkg ${{ github.event.repository.name }}-macOS-${{ matrix.target }}-${{ github.event.pull_request.number || env.SHA8 }}.pkg
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}-macOS-${{ matrix.target }}-${{ github.event.pull_request.number || env.SHA8 }}
+          path: |
+            ${{ github.event.repository.name }}-*.pkg
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            ${{ github.event.repository.name }}-*.pkg
