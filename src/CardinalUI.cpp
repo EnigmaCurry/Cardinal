@@ -1277,3 +1277,47 @@ UI* createUI()
 // -----------------------------------------------------------------------------------------------------------
 
 END_NAMESPACE_DISTRHO
+
+// -----------------------------------------------------------------------------------------------------------
+// JS-callable patch loader for the /dev-mini web demo.
+//
+// The wasm-web-demo's dev-mini page needs a way to load an arbitrary
+// patch after boot without relying on Cardinal's File dialog (which
+// requires a user gesture on the canvas and is fragile under synthetic
+// key events). It writes the raw patch.json bytes to a MEMFS path,
+// then calls this from JS via Module.ccall.
+//
+// libarchive is stubbed in the wasm build, so `.vcv` tar.zst archives
+// won't extract inside Cardinal — decompress in JS first and hand this
+// function a legacy-V1 raw-JSON file (Rack's Manager::load treats any
+// file whose first 4 bytes aren't the zstd magic as legacy JSON).
+
+#ifdef DISTRHO_OS_WASM
+#include <emscripten/emscripten.h>
+
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_load_patch_path(const char* const pathC)
+{
+    if (pathC == nullptr || pathC[0] == '\0')
+        return -1;
+    rack::Context* const ctx = rack::contextGet();
+    if (ctx == nullptr)
+        return -2;
+    if (ctx->patch == nullptr)
+        return -3;
+    try {
+        // loadAction: clears the engine, load(path), sets patch path,
+        // marks history as saved, pushes to recent-paths list. Same
+        // code path Cardinal's File → Import runs, so any threading or
+        // engine-lock concerns are the same as a normal user load.
+        ctx->patch->loadAction(std::string(pathC));
+    } catch (...) {
+        return -4;
+    }
+    return 0;
+}
+
+} // extern "C"
+#endif
