@@ -75,6 +75,15 @@ void surgext_rack_update_theme();
 // ValleyAudio
 #include "ValleyAudio/src/Valley.hpp"
 
+// EnigmaCurry — note `Pulse` is in ENIGMACURRY_CUSTOM in plugins/Makefile,
+// so its compile-time -D renames modelPulse → modelEnigmaCurryPulse to
+// avoid colliding with other packs' modelPulse.
+extern Model* modelTransport;
+extern Model* modelLatch;
+extern Model* modelEnigmaCurryPulse;
+extern Model* modelRange;
+extern Model* modelNegativeHarmony;
+
 // known terminal modules
 std::vector<Model*> hostTerminalModels;
 
@@ -87,6 +96,7 @@ Plugin* pluginInstance__BogaudioModules;
 Plugin* pluginInstance__MockbaModular;
 Plugin* pluginInstance__surgext;
 Plugin* pluginInstance__ValleyAudio;
+Plugin* pluginInstance__EnigmaCurry;
 
 namespace rack {
 
@@ -651,6 +661,22 @@ static void initStatic__ValleyAudio()
 }
 */
 
+static void initStatic__EnigmaCurry()
+{
+    Plugin* const p = new Plugin;
+    pluginInstance__EnigmaCurry = p;
+
+    const StaticPluginLoader spl(p, "EnigmaCurry");
+    if (spl.ok())
+    {
+        p->addModel(modelTransport);
+        p->addModel(modelLatch);
+        p->addModel(modelEnigmaCurryPulse);
+        p->addModel(modelRange);
+        p->addModel(modelNegativeHarmony);
+    }
+}
+
 void initStaticPlugins()
 {
     // cardinal-web-demo: bisect which sub-init hangs under wasm+headless.
@@ -669,6 +695,7 @@ void initStaticPlugins()
     WASM_TRACE(BogaudioModules);
     WASM_TRACE(MockbaModular);
     WASM_TRACE(surgext);
+    WASM_TRACE(EnigmaCurry);
     #undef WASM_TRACE
     /*
     initStatic__ValleyAudio();

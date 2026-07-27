@@ -704,6 +704,11 @@ EIGHTFOLD_FLAGS += -std=gnu++17
 # EnigmaCurry
 
 PLUGIN_FILES += $(filter-out EnigmaCurry/src/plugin.cpp,$(wildcard EnigmaCurry/src/*.cpp))
+# Same source set also goes into the Mini variant so headless-wasm builds
+# (CardinalWasmDSP) can use EnigmaCurry modules. plugin.cpp is excluded
+# because plugins-mini.cpp / plugins.cpp orchestrate registration
+# themselves.
+MINIPLUGIN_FILES += $(filter-out EnigmaCurry/src/plugin.cpp,$(wildcard EnigmaCurry/src/*.cpp))
 # modules/types which are present in other plugins
 ENIGMACURRY_CUSTOM = Pulse
 
@@ -1525,6 +1530,7 @@ MINIPLUGIN_LIST    += BogaudioModules
 MINIPLUGIN_LIST    += Fundamental
 MINIPLUGIN_LIST    += MockbaModular
 MINIPLUGIN_LIST    += surgext
+MINIPLUGIN_LIST    += EnigmaCurry
 # MINIPLUGIN_LIST    += ValleyAudio
 
 MINIRESOURCE_FILES  = AriaModules/res/components/jack-transparent.svg
@@ -1750,6 +1756,14 @@ MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_4.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_5.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_6.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_7.svg
+
+# EnigmaCurry — shared panel templates + fonts loaded by components.hpp.
+MINIRESOURCE_FILES += EnigmaCurry/res/3hp.svg
+MINIRESOURCE_FILES += EnigmaCurry/res/6hp.svg
+MINIRESOURCE_FILES += EnigmaCurry/res/10hp.svg
+MINIRESOURCE_FILES += EnigmaCurry/res/fonts/manrope/Manrope-Regular.ttf
+MINIRESOURCE_FILES += EnigmaCurry/res/fonts/dseg/DSEG14Modern-Regular.ttf
+MINIRESOURCE_FILES += EnigmaCurry/res/fonts/Fantasque/FantasqueSansMono-Regular.ttf
 
 # MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelDark.svg
 # MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelDark.svg

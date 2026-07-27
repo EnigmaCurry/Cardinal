@@ -933,9 +933,11 @@ struct MenuBar : widget::OpaqueWidget {
 		layout->spacing = math::Vec(0, 0);
 		addChild(layout);
 
-		FileButton* fileButton = new FileButton(isStandalone);
-		fileButton->text = "File";
-		layout->addChild(fileButton);
+		// File menu removed in the wasm-web-demo dev-mini build — its
+		// Save/Load items depend on osdialog_file / libarchive which
+		// don't work in-browser (we stub them out); the download UX
+		// lives outside Cardinal (Ctrl+S / the top-right button).
+		(void)isStandalone;
 
 		EditButton* editButton = new EditButton;
 		editButton->text = "Edit";

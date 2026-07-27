@@ -81,7 +81,7 @@ RUNTIME = ccall,cwrap,HEAPF32,HEAPU8,stringToNewUTF8,writeArrayToMemory
 # Without these, StaticPluginLoader bails out early and NO Rack modules
 # get registered, so patches load into an empty engine.
 EMBED_PLUGINS = Cardinal Fundamental AriaModules AudibleInstruments \
-                BogaudioModules MockbaModular surgext
+                BogaudioModules MockbaModular surgext EnigmaCurry
 EMBED_FLAGS   = $(foreach P,$(EMBED_PLUGINS),--embed-file $(abspath $(CARDINAL_ROOT)/plugins/$P/plugin.json)@/plugins/$P/plugin.json)
 
 LDFLAGS  = -O3 -Wl,--gc-sections
