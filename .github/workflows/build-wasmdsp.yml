@@ -1,0 +1,125 @@
+name: build-wasmdsp
+
+# Builds the CardinalWasmDSP headless wasm variant (src/CardinalWasmDSP)
+# and publishes the .js/.wasm as workflow artifacts on every push to the
+# cardinal-wasm-dsp branch. Pushing a `wasmdsp-v*` tag additionally
+# creates a GitHub Release with the artifacts attached.
+#
+# See src/CardinalWasmDSP/ for the subproject sources.
+
+on:
+  push:
+    branches: [cardinal-wasm-dsp]
+    tags: ['wasmdsp-v*']
+  workflow_dispatch:
+
+env:
+  CACHE_VERSION: 1
+  DEBIAN_FRONTEND: noninteractive
+  PAWPAW_FAST_MATH: 1
+  PAWPAW_SKIP_GLIB: 1
+  PAWPAW_SKIP_LTO: 1
+  PAWPAW_SKIP_LV2: 1
+  PAWPAW_SKIP_OPENSSL: 1
+  PAWPAW_SKIP_SAMPLERATE: 1
+  PAWPAW_SKIP_TESTS: 1
+
+jobs:
+  wasmdsp:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+    steps:
+      - name: Install system dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -yqq \
+            autoconf automake bison brotli build-essential ca-certificates \
+            cmake curl file flex gettext git gperf help2man libtool m4 \
+            make meson ninja-build patch perl pkg-config python-is-python3 \
+            python3 texinfo unzip wget xz-utils
+          git config --global --add safe.directory '*'
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache PawPaw wasm build tree
+        id: cache-pawpaw
+        uses: actions/cache@v4
+        with:
+          # PawPaw defaults to ~/PawPawBuilds; we run as root in the container
+          # so HOME=/root.
+          path: |
+            /root/PawPawBuilds
+            src/Rack/dep/bin
+            src/Rack/dep/include
+            src/Rack/dep/lib
+            src/Rack/dep/share
+            src/Rack/dep/jansson-2.12
+            src/Rack/dep/libarchive-3.4.3
+            src/Rack/dep/libsamplerate-0.1.9
+            src/Rack/dep/zstd-1.4.5
+          key: wasmdsp-pawpaw-v${{ env.CACHE_VERSION }}
+
+      - name: Bootstrap PawPaw wasm dependencies
+        if: steps.cache-pawpaw.outputs.cache-hit != 'true'
+        run: |
+          ./deps/PawPaw/bootstrap-cardinal.sh wasm
+          ./deps/PawPaw/.cleanup.sh wasm
+
+      - name: Patch emsdk (bulk-memory-opt whitelist)
+        run: |
+          python3 src/CardinalWasmDSP/scripts/patch-emsdk.py
+
+      - name: Patch Surge for Emscripten
+        run: |
+          # Cardinal's own CI applies this same sed as a "FIXME send patch upstream"
+          # (see .github/workflows/build.yml, wasm job).
+          sed -i -e 's/defined(__riscv)/defined(__riscv) || defined(__EMSCRIPTEN__)/' \
+            plugins/surgext/surge/src/common/globals.h
+
+      - name: Build Cardinal (produces rack-headless.a + plugins-mini-headless.a)
+        shell: bash
+        run: |
+          source deps/PawPaw/local.env wasm
+          # The full CardinalNative/Mini link needs our __hash_memory JS shim
+          # and -sERROR_ON_UNDEFINED_SYMBOLS=0. Build only the .a files we
+          # actually need, skipping the final wasm link.
+          make HAVE_LIBLO=false -j"$(nproc)" carla deps dgl mini-plugins mini-resources plugins
+          # Now the two static archives CardinalWasmDSP links against exist:
+          test -f src/rack-headless.a
+          test -f plugins/plugins-mini-headless.a
+          echo "prerequisite libs present ✓"
+
+      - name: Build CardinalWasmDSP
+        shell: bash
+        run: |
+          source deps/PawPaw/local.env wasm
+          make -C src/CardinalWasmDSP -j"$(nproc)"
+          ls -la bin-wasmdsp/
+
+      - name: Print artifact sizes
+        run: |
+          du -h bin-wasmdsp/CardinalWasmDSP.*
+          file bin-wasmdsp/CardinalWasmDSP.wasm
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardinalWasmDSP
+          path: |
+            bin-wasmdsp/CardinalWasmDSP.js
+            bin-wasmdsp/CardinalWasmDSP.wasm
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create GitHub Release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/wasmdsp-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bin-wasmdsp/CardinalWasmDSP.js
+            bin-wasmdsp/CardinalWasmDSP.wasm
+          generate_release_notes: true
+          fail_on_unmatched_files: true

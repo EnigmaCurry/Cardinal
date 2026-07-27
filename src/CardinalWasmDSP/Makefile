@@ -97,7 +97,7 @@ LDFLAGS += -sMODULARIZE=1 -sEXPORT_NAME=CardinalWasmDSP
 LDFLAGS += -sENVIRONMENT=web,worker
 LDFLAGS += -sEXPORTED_FUNCTIONS=$(EXPORTS)
 LDFLAGS += -sEXPORTED_RUNTIME_METHODS=$(RUNTIME)
-LDFLAGS += --js-library=$(CURDIR)/../../../emsdk-shims/hash_memory.js
+LDFLAGS += --js-library=$(CURDIR)/emsdk-shims/hash_memory.js
 
 # Static input libraries (all pre-built). Order matters: dependents
 # before dependencies, since wasm-ld is a single-pass linker.
