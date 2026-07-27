@@ -107,19 +107,26 @@ struct StaticPluginLoader {
           file(nullptr),
           rootJ(nullptr)
     {
+        #define SPL_T(msg) do { std::fprintf(stderr, "    SPL[%s]: %s\n", name, msg); std::fflush(stderr); } while(0)
 #ifdef DEBUG
         DEBUG("Loading plugin module %s", name);
 #endif
-
+        SPL_T("assigning p->path = asset::pluginPath(name)");
         p->path = asset::pluginPath(name);
 
+        SPL_T("computing pluginManifest path");
         const std::string manifestFilename = asset::pluginManifest(name);
+        std::fprintf(stderr, "    SPL[%s]: manifest path = %s\n", name, manifestFilename.c_str());
+        std::fflush(stderr);
 
+        SPL_T("calling std::fopen on manifest");
         if ((file = std::fopen(manifestFilename.c_str(), "r")) == nullptr)
         {
+            SPL_T("fopen returned NULL (expected in wasm) — returning early");
             d_stderr2("Manifest file %s does not exist", manifestFilename.c_str());
             return;
         }
+        SPL_T("fopen SUCCEEDED (unexpected in wasm-headless)");
 
         json_error_t error;
         if ((rootJ = json_loadf(file, 0, &error)) == nullptr)
@@ -139,6 +146,7 @@ struct StaticPluginLoader {
         // Reject plugin if slug already exists
         if (Plugin* const existingPlugin = getPlugin(p->slug))
             throw Exception("Plugin %s is already loaded, not attempting to load it again", p->slug.c_str());
+        #undef SPL_T
     }
 
     ~StaticPluginLoader()
@@ -188,12 +196,17 @@ struct StaticPluginLoader {
 
 static void initStatic__Cardinal()
 {
+    #define T(msg) do { std::fprintf(stderr, "  Cardinal: %s\n", msg); std::fflush(stderr); } while(0)
+    T("new Plugin");
     Plugin* const p = new Plugin;
     pluginInstance__Cardinal = p;
 
+    T("constructing StaticPluginLoader");
     const StaticPluginLoader spl(p, "Cardinal");
+    T("checking spl.ok()");
     if (spl.ok())
     {
+        T("spl.ok() == true, adding models");
         p->addModel(modelHostAudio2);
         p->addModel(modelHostCV);
         p->addModel(modelHostMIDI);
@@ -237,6 +250,8 @@ static void initStatic__Cardinal()
             modelHostTime,
         };
     }
+    T("about to exit scope (spl dtor runs)");
+    #undef T
 }
 
 static void initStatic__Fundamental()
@@ -638,13 +653,23 @@ static void initStatic__ValleyAudio()
 
 void initStaticPlugins()
 {
-    initStatic__Cardinal();
-    initStatic__Fundamental();
-    initStatic__Aria();
-    initStatic__AudibleInstruments();
-    initStatic__BogaudioModules();
-    initStatic__MockbaModular();
-    initStatic__surgext();
+    // cardinal-web-demo: bisect which sub-init hangs under wasm+headless.
+    #define WASM_TRACE(name) do { \
+        std::fprintf(stderr, "[plugins-mini] initStatic__" #name "() BEGIN\n"); \
+        std::fflush(stderr); \
+        initStatic__##name(); \
+        std::fprintf(stderr, "[plugins-mini] initStatic__" #name "() END\n"); \
+        std::fflush(stderr); \
+    } while (0)
+
+    WASM_TRACE(Cardinal);
+    WASM_TRACE(Fundamental);
+    WASM_TRACE(Aria);
+    WASM_TRACE(AudibleInstruments);
+    WASM_TRACE(BogaudioModules);
+    WASM_TRACE(MockbaModular);
+    WASM_TRACE(surgext);
+    #undef WASM_TRACE
     /*
     initStatic__ValleyAudio();
     */
