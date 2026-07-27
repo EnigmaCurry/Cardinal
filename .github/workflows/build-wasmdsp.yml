@@ -1,11 +1,13 @@
 name: build-wasmdsp
 
-# Builds the CardinalWasmDSP headless wasm variant (src/CardinalWasmDSP)
-# and publishes the .js/.wasm as workflow artifacts on every push to the
-# cardinal-wasm-dsp branch. Pushing a `wasmdsp-v*` tag additionally
-# creates a GitHub Release with the artifacts attached.
+# Builds CardinalWasmDSP.{js,wasm} using the Nix FHS sandbox (flake.nix
+# at the repo root). Nix provides a reproducible toolchain that matches
+# the environment CardinalWasmDSP was developed against; earlier apt-based
+# attempts hit "em++: no input files" during Surge/JUCE build, apparently
+# due to Ubuntu-vs-emsdk environment quirks Nix's pinned deps sidestep.
 #
-# See src/CardinalWasmDSP/ for the subproject sources.
+# Pushes to cardinal-wasm-dsp branch → workflow artifact (90d retention).
+# Pushing a `wasmdsp-v*` tag → GitHub Release with the .js/.wasm attached.
 
 on:
   push:
@@ -14,8 +16,7 @@ on:
   workflow_dispatch:
 
 env:
-  CACHE_VERSION: 1
-  DEBIAN_FRONTEND: noninteractive
+  CACHE_VERSION: 2
   PAWPAW_FAST_MATH: 1
   PAWPAW_SKIP_GLIB: 1
   PAWPAW_SKIP_LTO: 1
@@ -27,31 +28,28 @@ env:
 jobs:
   wasmdsp:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:22.04
     steps:
-      - name: Install system dependencies
-        run: |
-          apt-get update -qq
-          apt-get install -yqq \
-            autoconf automake bison brotli build-essential ca-certificates \
-            cmake curl file flex gettext git gperf help2man libtool m4 \
-            make meson ninja-build patch perl pkg-config python-is-python3 \
-            python3 texinfo unzip wget xz-utils
-          git config --global --add safe.directory '*'
-
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            sandbox-fallback = false
+
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Cache PawPaw wasm build tree
         id: cache-pawpaw
         uses: actions/cache@v4
         with:
-          # PawPaw defaults to ~/PawPawBuilds; we run as root in the container
-          # so HOME=/root.
+          # PawPaw defaults to ~/PawPawBuilds; on runners HOME=/home/runner.
           path: |
-            /root/PawPawBuilds
+            ~/PawPawBuilds
             src/Rack/dep/bin
             src/Rack/dep/include
             src/Rack/dep/lib
@@ -60,17 +58,20 @@ jobs:
             src/Rack/dep/libarchive-3.4.3
             src/Rack/dep/libsamplerate-0.1.9
             src/Rack/dep/zstd-1.4.5
-          key: wasmdsp-pawpaw-v${{ env.CACHE_VERSION }}
+          key: wasmdsp-pawpaw-nix-v${{ env.CACHE_VERSION }}
 
-      - name: Bootstrap PawPaw wasm dependencies
+      - name: Bootstrap PawPaw wasm dependencies (Nix FHS)
         if: steps.cache-pawpaw.outputs.cache-hit != 'true'
         run: |
-          ./deps/PawPaw/bootstrap-cardinal.sh wasm
-          ./deps/PawPaw/.cleanup.sh wasm
+          nix run . -- bash -c '
+            set -euo pipefail
+            ./deps/PawPaw/bootstrap-cardinal.sh wasm
+            ./deps/PawPaw/.cleanup.sh wasm
+          '
 
       - name: Patch emsdk (bulk-memory-opt whitelist)
         run: |
-          python3 src/CardinalWasmDSP/scripts/patch-emsdk.py
+          nix run . -- python3 src/CardinalWasmDSP/scripts/patch-emsdk.py
 
       - name: Patch Surge for Emscripten
         run: |
@@ -79,33 +80,25 @@ jobs:
           sed -i -e 's/defined(__riscv)/defined(__riscv) || defined(__EMSCRIPTEN__)/' \
             plugins/surgext/surge/src/common/globals.h
 
-      - name: Build Cardinal (produces rack-headless.a + plugins-mini-headless.a)
-        shell: bash
+      - name: Build Cardinal libraries (Nix FHS)
         run: |
-          source deps/PawPaw/local.env wasm
-          # Skip the `plugins` target — that would build plugins-headless.a
-          # (the full ~100+ module catalog, ~40 MB of .o) which
-          # CardinalWasmDSP doesn't link against. `mini-plugins` alone
-          # produces the Mini variant we actually need.
-          # Also skip the full CardinalNative/Mini wasm link — that needs
-          # the __hash_memory JS shim and -sERROR_ON_UNDEFINED_SYMBOLS=0
-          # workarounds only CardinalWasmDSP wires up.
-          make HAVE_LIBLO=false -j"$(nproc)" carla deps dgl mini-plugins mini-resources
-          test -f src/rack-headless.a
-          test -f plugins/plugins-mini-headless.a
-          echo "prerequisite libs present ✓"
+          nix run . -- bash -c '
+            set -euo pipefail
+            source deps/PawPaw/local.env wasm
+            # Only the .a files CardinalWasmDSP links against.
+            make HAVE_LIBLO=false -j"$(nproc)" carla deps dgl mini-plugins mini-resources
+            test -f src/rack-headless.a
+            test -f plugins/plugins-mini-headless.a
+          '
 
-      - name: Build CardinalWasmDSP
-        shell: bash
+      - name: Build CardinalWasmDSP (Nix FHS)
         run: |
-          source deps/PawPaw/local.env wasm
-          make -C src/CardinalWasmDSP -j"$(nproc)"
-          ls -la bin-wasmdsp/
-
-      - name: Print artifact sizes
-        run: |
+          nix run . -- bash -c '
+            set -euo pipefail
+            source deps/PawPaw/local.env wasm
+            make -C src/CardinalWasmDSP -j"$(nproc)"
+          '
           du -h bin-wasmdsp/CardinalWasmDSP.*
-          file bin-wasmdsp/CardinalWasmDSP.wasm
 
       - name: Upload as workflow artifact
         uses: actions/upload-artifact@v4
