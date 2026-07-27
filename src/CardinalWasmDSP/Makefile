@@ -71,7 +71,7 @@ CXXFLAGS += $(INCLUDES) $(DEFINES)
 # Exported functions the JS wrapper will call via ccall/cwrap. Kept on
 # one line — emcc parses the whole value as a single comma-separated
 # argument, and any embedded whitespace becomes a separate emcc arg.
-EXPORTS = _malloc,_free,_cardinal_init,_cardinal_load_patch_json,_cardinal_reset,_cardinal_process,_cardinal_get_input_buffer,_cardinal_get_output_buffer,_cardinal_get_block_size,_cardinal_get_input_channel_count,_cardinal_get_output_channel_count
+EXPORTS = _malloc,_free,_cardinal_init,_cardinal_load_patch_json,_cardinal_reset,_cardinal_process,_cardinal_get_input_buffer,_cardinal_get_output_buffer,_cardinal_get_block_size,_cardinal_get_input_channel_count,_cardinal_get_output_channel_count,_cardinal_push_midi
 
 RUNTIME = ccall,cwrap,HEAPF32,HEAPU8,stringToNewUTF8,writeArrayToMemory
 
@@ -97,7 +97,7 @@ LDFLAGS += -sMODULARIZE=1 -sEXPORT_NAME=CardinalWasmDSP
 LDFLAGS += -sENVIRONMENT=web,worker
 LDFLAGS += -sEXPORTED_FUNCTIONS=$(EXPORTS)
 LDFLAGS += -sEXPORTED_RUNTIME_METHODS=$(RUNTIME)
-LDFLAGS += --js-library=$(CURDIR)/emsdk-shims/hash_memory.js
+LDFLAGS += --js-library=$(CURDIR)/emsdk-shims/stubs.js
 
 # Static input libraries (all pre-built). Order matters: dependents
 # before dependencies, since wasm-ld is a single-pass linker.

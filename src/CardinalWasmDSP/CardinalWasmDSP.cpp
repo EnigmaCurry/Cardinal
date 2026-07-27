@@ -58,6 +58,12 @@ std::vector<float*> g_ins;   // channel-major float[frames] each
 std::vector<float*> g_outs;
 int  g_block_size = 0;
 
+// MIDI event queue. JS pushes events between cardinal_process() calls;
+// cardinal_process moves them into pcontext just before stepBlock so
+// HostMIDI can dispatch them. Cardinal's MidiEvent is small (frame,
+// size, up to 4 bytes inline, no dataExt for MVP).
+std::vector<CardinalDISTRHO::MidiEvent> g_midi_queue;
+
 // The audio ports Cardinal exposes to a patch. plugins-mini-headless.a's
 // HostAudio module reads/writes through CardinalPluginContext::dataIns /
 // dataOuts. We manage the underlying storage.
@@ -217,9 +223,41 @@ void cardinal_process(int frames)
     // host zeroes the buffers before each block; we do the same.
     for (auto* p : g_outs) std::memset(p, 0, sizeof(float) * frames);
 
+    // Wire the queued MIDI events (pushed by JS since last block) into
+    // the plugin context for HostMIDI to consume during stepBlock.
+    if (!g_midi_queue.empty()) {
+        g_pcontext->midiEvents     = g_midi_queue.data();
+        g_pcontext->midiEventCount = static_cast<uint32_t>(g_midi_queue.size());
+    } else {
+        g_pcontext->midiEvents     = nullptr;
+        g_pcontext->midiEventCount = 0;
+    }
+
     g_pcontext->processCounter += 1;
     g_engine->stepBlock(frames);
     g_pcontext->frame += static_cast<uint64_t>(frames);
+
+    g_midi_queue.clear();
+}
+
+// Push one MIDI event into the queue for the NEXT cardinal_process()
+// call. frame_offset is the sub-block frame the event should fire on
+// (0 = start of block). Only up to 3 raw bytes are supported (fits
+// note-on/off, CC, pitch bend, program change, aftertouch). SysEx would
+// need dataExt handling — skipped for MVP.
+EMSCRIPTEN_KEEPALIVE
+void cardinal_push_midi(int frame_offset, int size, int b0, int b1, int b2)
+{
+    if (size < 1 || size > 3) return;
+    CardinalDISTRHO::MidiEvent ev;
+    ev.frame   = static_cast<uint32_t>(frame_offset < 0 ? 0 : frame_offset);
+    ev.size    = static_cast<uint32_t>(size);
+    ev.data[0] = static_cast<uint8_t>(b0 & 0xff);
+    ev.data[1] = static_cast<uint8_t>(b1 & 0xff);
+    ev.data[2] = static_cast<uint8_t>(b2 & 0xff);
+    ev.data[3] = 0;
+    ev.dataExt = nullptr;
+    g_midi_queue.push_back(ev);
 }
 
 EMSCRIPTEN_KEEPALIVE
