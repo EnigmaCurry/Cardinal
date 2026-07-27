@@ -83,11 +83,14 @@ jobs:
         shell: bash
         run: |
           source deps/PawPaw/local.env wasm
-          # The full CardinalNative/Mini link needs our __hash_memory JS shim
-          # and -sERROR_ON_UNDEFINED_SYMBOLS=0. Build only the .a files we
-          # actually need, skipping the final wasm link.
-          make HAVE_LIBLO=false -j"$(nproc)" carla deps dgl mini-plugins mini-resources plugins
-          # Now the two static archives CardinalWasmDSP links against exist:
+          # Skip the `plugins` target — that would build plugins-headless.a
+          # (the full ~100+ module catalog, ~40 MB of .o) which
+          # CardinalWasmDSP doesn't link against. `mini-plugins` alone
+          # produces the Mini variant we actually need.
+          # Also skip the full CardinalNative/Mini wasm link — that needs
+          # the __hash_memory JS shim and -sERROR_ON_UNDEFINED_SYMBOLS=0
+          # workarounds only CardinalWasmDSP wires up.
+          make HAVE_LIBLO=false -j"$(nproc)" carla deps dgl mini-plugins mini-resources
           test -f src/rack-headless.a
           test -f plugins/plugins-mini-headless.a
           echo "prerequisite libs present ✓"
