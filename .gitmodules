@@ -1,6 +1,7 @@
 [submodule "plugins/Cardinal/Rack"]
 	path = src/Rack
 	url = https://github.com/VCVRack/Rack.git
+	ignore = dirty
 [submodule "dpf"]
 	path = dpf
 	url = https://github.com/DISTRHO/DPF.git
@@ -224,6 +225,7 @@
 [submodule "plugins/surgext"]
 	path = plugins/surgext
 	url = https://github.com/surge-synthesizer/surge-rack.git
+	ignore = dirty
 [submodule "plugins/Sapphire"]
 	path = plugins/Sapphire
 	url = https://github.com/cosinekitty/sapphire.git

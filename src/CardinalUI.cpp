@@ -1319,5 +1319,24 @@ int cardinal_load_patch_path(const char* const pathC)
     return 0;
 }
 
+// Flush the current live engine state to `${autosavePath}/patch.json`.
+// The dev-mini download button reads that file after calling this so
+// its bytes reflect the on-screen rack, not the last periodic autosave.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_save_autosave(void)
+{
+    rack::Context* const ctx = rack::contextGet();
+    if (ctx == nullptr)
+        return -2;
+    if (ctx->patch == nullptr)
+        return -3;
+    try {
+        ctx->patch->saveAutosave();
+    } catch (...) {
+        return -4;
+    }
+    return 0;
+}
+
 } // extern "C"
 #endif
