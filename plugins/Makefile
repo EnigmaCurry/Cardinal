@@ -787,6 +787,14 @@ HETRICKCV_CUSTOM = ASR BlankPanel FlipFlop MidSide MinMax PanelBaseWidget Invert
 PLUGIN_FILES += $(wildcard ImpromptuModular/src/*.cpp)
 PLUGIN_FILES += $(filter-out ImpromptuModular/src/comp/PanelTheme.cpp,$(wildcard ImpromptuModular/src/comp/*.cpp))
 PLUGIN_FILES += ImpromptuModularDark/PanelTheme.cpp
+# Same source set also goes into the Mini variant so headless-wasm builds
+# (CardinalWasmDSP) can use ImpromptuModular. ImpromptuModular.cpp defines
+# `Plugin* pluginInstance` — renamed by the per-file rule below to
+# `pluginInstance__ImpromptuModular`, so plugins-mini.cpp must NOT also
+# define that symbol (extern-declare it instead).
+MINIPLUGIN_FILES += $(wildcard ImpromptuModular/src/*.cpp)
+MINIPLUGIN_FILES += $(filter-out ImpromptuModular/src/comp/PanelTheme.cpp,$(wildcard ImpromptuModular/src/comp/*.cpp))
+MINIPLUGIN_FILES += ImpromptuModularDark/PanelTheme.cpp
 
 # modules/types which are present in other plugins
 IMPROMPTUMODULAR_CUSTOM = RefreshCounter
@@ -1531,6 +1539,7 @@ MINIPLUGIN_LIST    += Fundamental
 MINIPLUGIN_LIST    += MockbaModular
 MINIPLUGIN_LIST    += surgext
 MINIPLUGIN_LIST    += EnigmaCurry
+MINIPLUGIN_LIST    += ImpromptuModular
 # MINIPLUGIN_LIST    += ValleyAudio
 
 MINIRESOURCE_FILES  = AriaModules/res/components/jack-transparent.svg
@@ -1764,6 +1773,17 @@ MINIRESOURCE_FILES += EnigmaCurry/res/10hp.svg
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/manrope/Manrope-Regular.ttf
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/dseg/DSEG14Modern-Regular.ttf
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/Fantasque/FantasqueSansMono-Regular.ttf
+
+# ImpromptuModular — every ModuleWidget loads its panel from res/panels/,
+# component knobs/switches from res/comp/complib/, and the 14-segment LED
+# font from res/fonts/. Without these bundled into CardinalMini.data the
+# browser preview throws on Svg::load() and the module never shows up in
+# the module picker.
+MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/panels/*.svg)
+MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/complib/*.svg)
+MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/*.svg)
+MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/*.svg)
+MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/fonts/*.ttf)
 
 # MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelDark.svg
 # MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelDark.svg

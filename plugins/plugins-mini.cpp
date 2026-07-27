@@ -84,6 +84,41 @@ extern Model* modelEnigmaCurryPulse;
 extern Model* modelRange;
 extern Model* modelNegativeHarmony;
 
+// ImpromptuModular — the pack's own ImpromptuModular.cpp is compiled into
+// plugins-mini with -DpluginInstance=pluginInstance__ImpromptuModular, so
+// we extern-declare that symbol rather than defining it here (see the
+// existing per-file rule in plugins/Makefile).
+extern Model* modelAdaptiveQuantizer;
+extern Model* modelBigButtonSeq;
+extern Model* modelBigButtonSeq2;
+extern Model* modelChordKey;
+extern Model* modelChordKeyExpander;
+extern Model* modelClocked;
+extern Model* modelClockedExpander;
+extern Model* modelClkd;
+extern Model* modelCvPad;
+extern Model* modelFoundry;
+extern Model* modelFoundryExpander;
+extern Model* modelFourView;
+extern Model* modelGateSeq64;
+extern Model* modelGateSeq64Expander;
+extern Model* modelHotkey;
+extern Model* modelPart;
+extern Model* modelPhraseSeq16;
+extern Model* modelPhraseSeq32;
+extern Model* modelPhraseSeqExpander;
+extern Model* modelProbKey;
+extern Model* modelSemiModularSynth;
+extern Model* modelSygen;
+extern Model* modelTact;
+extern Model* modelTact1;
+extern Model* modelTactG;
+extern Model* modelTwelveKey;
+extern Model* modelVariations;
+extern Model* modelWriteSeq32;
+extern Model* modelWriteSeq64;
+extern Model* modelBlankPanel;
+
 // known terminal modules
 std::vector<Model*> hostTerminalModels;
 
@@ -97,6 +132,9 @@ Plugin* pluginInstance__MockbaModular;
 Plugin* pluginInstance__surgext;
 Plugin* pluginInstance__ValleyAudio;
 Plugin* pluginInstance__EnigmaCurry;
+// Not defined here — ImpromptuModular.cpp already defines it via the
+// per-file -DpluginInstance=pluginInstance__ImpromptuModular rename.
+extern Plugin* pluginInstance__ImpromptuModular;
 
 namespace rack {
 
@@ -677,6 +715,47 @@ static void initStatic__EnigmaCurry()
     }
 }
 
+static void initStatic__ImpromptuModular()
+{
+    Plugin* const p = new Plugin;
+    pluginInstance__ImpromptuModular = p;
+
+    const StaticPluginLoader spl(p, "ImpromptuModular");
+    if (spl.ok())
+    {
+        p->addModel(modelAdaptiveQuantizer);
+        p->addModel(modelBigButtonSeq);
+        p->addModel(modelBigButtonSeq2);
+        p->addModel(modelChordKey);
+        p->addModel(modelChordKeyExpander);
+        p->addModel(modelClocked);
+        p->addModel(modelClockedExpander);
+        p->addModel(modelClkd);
+        p->addModel(modelCvPad);
+        p->addModel(modelFoundry);
+        p->addModel(modelFoundryExpander);
+        p->addModel(modelFourView);
+        p->addModel(modelGateSeq64);
+        p->addModel(modelGateSeq64Expander);
+        p->addModel(modelHotkey);
+        p->addModel(modelPart);
+        p->addModel(modelPhraseSeq16);
+        p->addModel(modelPhraseSeq32);
+        p->addModel(modelPhraseSeqExpander);
+        p->addModel(modelProbKey);
+        p->addModel(modelSemiModularSynth);
+        p->addModel(modelSygen);
+        p->addModel(modelTact);
+        p->addModel(modelTact1);
+        p->addModel(modelTactG);
+        p->addModel(modelTwelveKey);
+        p->addModel(modelVariations);
+        p->addModel(modelWriteSeq32);
+        p->addModel(modelWriteSeq64);
+        p->addModel(modelBlankPanel);
+    }
+}
+
 void initStaticPlugins()
 {
     // cardinal-web-demo: bisect which sub-init hangs under wasm+headless.
@@ -696,6 +775,7 @@ void initStaticPlugins()
     WASM_TRACE(MockbaModular);
     WASM_TRACE(surgext);
     WASM_TRACE(EnigmaCurry);
+    WASM_TRACE(ImpromptuModular);
     #undef WASM_TRACE
     /*
     initStatic__ValleyAudio();
