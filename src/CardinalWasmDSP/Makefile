@@ -71,7 +71,7 @@ CXXFLAGS += $(INCLUDES) $(DEFINES)
 # Exported functions the JS wrapper will call via ccall/cwrap. Kept on
 # one line — emcc parses the whole value as a single comma-separated
 # argument, and any embedded whitespace becomes a separate emcc arg.
-EXPORTS = _malloc,_free,_cardinal_init,_cardinal_load_patch_json,_cardinal_reset,_cardinal_process,_cardinal_get_input_buffer,_cardinal_get_output_buffer,_cardinal_get_block_size,_cardinal_get_input_channel_count,_cardinal_get_output_channel_count,_cardinal_push_midi,_cardinal_get_mixer_ctrl,_cardinal_mixer_ctrl_size
+EXPORTS = _malloc,_free,_cardinal_init,_cardinal_load_patch_json,_cardinal_reset,_cardinal_process,_cardinal_get_input_buffer,_cardinal_get_output_buffer,_cardinal_get_block_size,_cardinal_get_input_channel_count,_cardinal_get_output_channel_count,_cardinal_push_midi,_cardinal_get_mixer_ctrl,_cardinal_mixer_ctrl_size,_cardinal_find_module,_cardinal_module_get_output,_cardinal_module_get_param
 
 RUNTIME = ccall,cwrap,HEAPF32,HEAPU8,stringToNewUTF8,writeArrayToMemory
 

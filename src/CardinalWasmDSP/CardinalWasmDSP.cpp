@@ -58,6 +58,22 @@ std::vector<float*> g_ins;   // channel-major float[frames] each
 std::vector<float*> g_outs;
 int  g_block_size = 0;
 
+// Handle table for JS-side inspection of individual modules (e.g. reading
+// Impromptu Clocked's BPM_OUTPUT so the browser UI reflects the patch's
+// real tempo instead of a hardcoded 120). Populated by walking the engine's
+// module list after a successful patch load; index into this vector is the
+// opaque `handle` we hand to JS. Cleared when the engine is cleared.
+std::vector<rack::engine::Module*> g_module_handles;
+
+void rebuild_module_handles() {
+    g_module_handles.clear();
+    if (g_engine == nullptr) return;
+    for (int64_t id : g_engine->getModuleIds()) {
+        if (rack::engine::Module* m = g_engine->getModule(id))
+            g_module_handles.push_back(m);
+    }
+}
+
 // MIDI event queue. JS pushes events between cardinal_process() calls;
 // cardinal_process moves them into pcontext just before stepBlock so
 // HostMIDI can dispatch them. Cardinal's MidiEvent is small (frame,
@@ -177,6 +193,7 @@ int cardinal_load_patch_json(const char* json_str)
     // Clearing the engine while it's being stepped from another thread
     // would race, but we're single-threaded in wasm.
     g_engine->clear();
+    g_module_handles.clear();
 
     json_error_t err;
     json_t* root = json_loads(json_str, 0, &err);
@@ -193,6 +210,7 @@ int cardinal_load_patch_json(const char* json_str)
         return -3;
     }
     json_decref(root);
+    rebuild_module_handles();
     return 0;
 }
 
@@ -200,6 +218,7 @@ EMSCRIPTEN_KEEPALIVE
 void cardinal_reset(void)
 {
     if (g_engine != nullptr) g_engine->clear();
+    g_module_handles.clear();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -276,5 +295,50 @@ int cardinal_get_output_channel_count(void) { return CARDINAL_NUM_AUDIO_OUTPUTS;
 // from Mixer8.cpp itself so both CardinalWasmDSP and CardinalMini expose
 // them. The EnigmaCurry pack's static archive carries both the storage
 // (g_mixer_ctrl) and the accessors.
+
+// ------------------------------------------------------------------------
+// Module inspection ABI. Lets JS read individual module state (params,
+// output-port voltages) after each cardinal_process() call — used by the
+// main-page UI to display real tempo from an Impromptu Clocked module,
+// rather than the hardcoded worklet-side BPM. Returns -1 / 0.0 on any
+// out-of-range access.
+//
+// Handles are indices into g_module_handles, rebuilt after each patch
+// load. They are stable for the lifetime of the loaded patch — a reset
+// or new load invalidates them.
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_find_module(const char* plugin_slug, const char* model_slug)
+{
+    if (plugin_slug == nullptr || model_slug == nullptr) return -1;
+    for (size_t i = 0; i < g_module_handles.size(); ++i) {
+        rack::engine::Module* m = g_module_handles[i];
+        if (m == nullptr || m->model == nullptr || m->model->plugin == nullptr)
+            continue;
+        if (m->model->plugin->slug == plugin_slug && m->model->slug == model_slug)
+            return static_cast<int>(i);
+    }
+    return -1;
+}
+
+EMSCRIPTEN_KEEPALIVE
+float cardinal_module_get_output(int handle, int output_id)
+{
+    if (handle < 0 || handle >= static_cast<int>(g_module_handles.size())) return 0.f;
+    rack::engine::Module* m = g_module_handles[handle];
+    if (m == nullptr) return 0.f;
+    if (output_id < 0 || output_id >= static_cast<int>(m->outputs.size())) return 0.f;
+    return m->outputs[output_id].getVoltage();
+}
+
+EMSCRIPTEN_KEEPALIVE
+float cardinal_module_get_param(int handle, int param_id)
+{
+    if (handle < 0 || handle >= static_cast<int>(g_module_handles.size())) return 0.f;
+    rack::engine::Module* m = g_module_handles[handle];
+    if (m == nullptr) return 0.f;
+    if (param_id < 0 || param_id >= static_cast<int>(m->params.size())) return 0.f;
+    return m->params[param_id].getValue();
+}
 
 } // extern "C"
