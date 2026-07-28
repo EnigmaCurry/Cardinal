@@ -396,8 +396,8 @@ PLUGIN_FILES += AriaModules/src/Splort.cpp
 PLUGIN_FILES += AriaModules/src/Swerge.cpp
 PLUGIN_FILES += AriaModules/src/Undular.cpp
 
-# [manifest] MINIPLUGIN_FILES += AriaModules/src/Spleet.cpp
-# [manifest] MINIPLUGIN_FILES += AriaModules/src/Swerge.cpp
+MINIPLUGIN_FILES += AriaModules/src/Spleet.cpp
+MINIPLUGIN_FILES += AriaModules/src/Swerge.cpp
 
 # modules/types which are present in other plugins
 ARIA_CUSTOM = Blank
@@ -511,7 +511,7 @@ PLUGIN_FILES += AudibleInstruments/eurorack/streams/svf.cc
 PLUGIN_FILES += AudibleInstruments/eurorack/streams/vactrol.cc
 PLUGIN_FILES += AudibleInstruments/eurorack/streams/compressor.cc
 
-# [manifest] MINIPLUGIN_FILES += AudibleInstruments/src/Plaits.cpp
+MINIPLUGIN_FILES += AudibleInstruments/src/Plaits.cpp
 # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/macro_oscillator.cc
 # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/analog_oscillator.cc
 # MINIPLUGIN_FILES += AudibleInstruments/eurorack/braids/digital_oscillator.cc
@@ -521,10 +521,10 @@ MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/*.cc)
 MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/engine/*.cc)
 MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/speech/*.cc)
 MINIPLUGIN_FILES += $(wildcard AudibleInstruments/eurorack/plaits/dsp/physical_modelling/*.cc)
-# [manifest] MINIPLUGIN_FILES += AudibleInstruments/eurorack/plaits/resources.cc
-# [manifest] MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/dsp/atan.cc
-# [manifest] MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/dsp/units.cc
-# [manifest] MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/utils/random.cc
+MINIPLUGIN_FILES += AudibleInstruments/eurorack/plaits/resources.cc
+MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/dsp/atan.cc
+MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/dsp/units.cc
+MINIPLUGIN_FILES += AudibleInstruments/eurorack/stmlib/utils/random.cc
 
 # --------------------------------------------------------------
 # Autinn
@@ -592,41 +592,41 @@ PLUGIN_FILES += $(wildcard BogaudioModules/src/dsp/*.cpp)
 PLUGIN_FILES += $(wildcard BogaudioModules/src/dsp/filters/*.cpp)
 PLUGIN_FILES += BogaudioModules-helper/BogaudioModules-helper.cpp
 
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/AD.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/LFO.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/Noise.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/Offset.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/SampleHold.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/Switch.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/Switch18.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/Unison.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/VCA.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/VCF.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/VCO.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/disable_output_limit.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/lfo_base.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/matrix_base.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/menu.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/module.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/param_quantities.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/poly_channels.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/rack_overrides.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/save_latch_to_patch.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/skins.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/utils.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/vco_base.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/widgets.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/analyzer.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/envelope.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/math.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/noise.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/oscillator.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/signal.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/table.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/experiments.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/filter.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/multimode.cpp
-# [manifest] MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/resample.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/AD.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/LFO.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/Noise.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/Offset.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/SampleHold.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/Switch.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/Switch18.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/Unison.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/VCA.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/VCF.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/VCO.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/disable_output_limit.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/lfo_base.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/matrix_base.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/menu.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/module.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/param_quantities.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/poly_channels.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/rack_overrides.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/save_latch_to_patch.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/skins.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/utils.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/vco_base.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/widgets.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/analyzer.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/envelope.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/math.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/noise.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/oscillator.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/signal.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/table.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/experiments.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/filter.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/multimode.cpp
+MINIPLUGIN_FILES += BogaudioModules/src/dsp/filters/resample.cpp
 MINIPLUGIN_FILES += BogaudioModules-helper/BogaudioModules-helper.cpp
 
 # modules/types which are present in other plugins
@@ -916,13 +916,13 @@ PLUGIN_FILES += $(filter-out MockbaModular/src/plugin.cpp MockbaModular/src/Mock
 # modules/types which are present in other plugins
 MOCKBAMODULAR_CUSTOM = Blank Comparator
 
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/CZOsc.cpp
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/Filtah.cpp
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/MaugOsc.cpp
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/Mixah.cpp
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/Pannah.cpp
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/ReVoltah.cpp
-# [manifest] MINIPLUGIN_FILES += MockbaModular/src/Shapah.cpp
+MINIPLUGIN_FILES += MockbaModular/src/CZOsc.cpp
+MINIPLUGIN_FILES += MockbaModular/src/Filtah.cpp
+MINIPLUGIN_FILES += MockbaModular/src/MaugOsc.cpp
+MINIPLUGIN_FILES += MockbaModular/src/Mixah.cpp
+MINIPLUGIN_FILES += MockbaModular/src/Pannah.cpp
+MINIPLUGIN_FILES += MockbaModular/src/ReVoltah.cpp
+MINIPLUGIN_FILES += MockbaModular/src/Shapah.cpp
 
 # --------------------------------------------------------------
 # Mog
@@ -1164,22 +1164,22 @@ SURGEXT_FLAGS += -DSURGE_RACK_SURGE_VERSION=Cardinal
 
 SURGEXT_FLAGS += -I$(abspath ../carla/source/modules)
 
-# [manifest] MINIPLUGIN_FILES += surgext/src/Delay.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/DelayLineByFreq.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/DelayLineByFreqExpanded.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/EGxVCA.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/FX.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/LFO.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/Mixer.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/ModMatrix.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/QuadAD.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/QuadLFO.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/VCO.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/VCF.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/Waveshaper.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/XTModule.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/XTModuleWidget.cpp
-# [manifest] MINIPLUGIN_FILES += surgext/src/XTStyle.cpp
+MINIPLUGIN_FILES += surgext/src/Delay.cpp
+MINIPLUGIN_FILES += surgext/src/DelayLineByFreq.cpp
+MINIPLUGIN_FILES += surgext/src/DelayLineByFreqExpanded.cpp
+MINIPLUGIN_FILES += surgext/src/EGxVCA.cpp
+MINIPLUGIN_FILES += surgext/src/FX.cpp
+MINIPLUGIN_FILES += surgext/src/LFO.cpp
+MINIPLUGIN_FILES += surgext/src/Mixer.cpp
+MINIPLUGIN_FILES += surgext/src/ModMatrix.cpp
+MINIPLUGIN_FILES += surgext/src/QuadAD.cpp
+MINIPLUGIN_FILES += surgext/src/QuadLFO.cpp
+MINIPLUGIN_FILES += surgext/src/VCO.cpp
+MINIPLUGIN_FILES += surgext/src/VCF.cpp
+MINIPLUGIN_FILES += surgext/src/Waveshaper.cpp
+MINIPLUGIN_FILES += surgext/src/XTModule.cpp
+MINIPLUGIN_FILES += surgext/src/XTModuleWidget.cpp
+MINIPLUGIN_FILES += surgext/src/XTStyle.cpp
 MINIPLUGIN_FILES += surgext-helper/surgext-helper.cpp
 
 # --------------------------------------------------------------
@@ -1872,21 +1872,6 @@ MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/fonts/*.ttf)
 # MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSPurpleSmall-fg.svg
 
 # MOD builds only have LV2 main and FX variant
-
-# BEGIN MODULES-MANIFEST resources — added by scripts/apply-manifest.py
-# SVG faces for enabled modules that Cardinal's pristine mini
-# resource list didn't bundle (without these the module loads
-# but renders as an invisible/blank slot).
-MINIRESOURCE_FILES += Fundamental/res/WTVCO.svg   # [manifest] Fundamental
-MINIRESOURCE_FILES += Fundamental/res/VCA.svg   # [manifest] Fundamental
-MINIRESOURCE_FILES += Fundamental/res/WTLFO.svg   # [manifest] Fundamental
-MINIRESOURCE_FILES += Fundamental/res/Mixer.svg   # [manifest] Fundamental
-MINIRESOURCE_FILES += Fundamental/res/Octave.svg   # [manifest] Fundamental
-MINIRESOURCE_FILES += ImpromptuModular/res/panels/Clocked.svg   # [manifest] ImpromptuModular
-MINIRESOURCE_FILES += ImpromptuModular/res/panels/GateSeq64.svg   # [manifest] ImpromptuModular
-MINIRESOURCE_FILES += ImpromptuModular/res/panels/PhraseSeq32.svg   # [manifest] ImpromptuModular
-# END MODULES-MANIFEST
-
 ifeq ($(MOD_BUILD),true)
 
 MINI_RESOURCES  = $(MINIPLUGIN_LIST:%=../bin/CardinalMini.lv2/resources/PluginManifests/%.json)
@@ -2127,22 +2112,6 @@ endif
 
 PLUGIN_OBJS  = $(PLUGIN_FILES:%=$(BUILD_DIR)/%.o)
 PLUGIN_OBJS += $(PLUGIN_BINARIES:%=$(BUILD_DIR)/%.bin.o)
-
-
-# BEGIN MODULES-MANIFEST — added by scripts/apply-manifest.py
-# Source files for modules the manifest enabled that Cardinal's
-# pristine mini set didn't compile (extras).
-MINIPLUGIN_FILES += EnigmaCurry/src/Transport.cpp   # [manifest] EnigmaCurry
-MINIPLUGIN_FILES += Fundamental/src/WTVCO.cpp   # [manifest] Fundamental
-MINIPLUGIN_FILES += Fundamental/src/VCA.cpp   # [manifest] Fundamental
-MINIPLUGIN_FILES += Fundamental/src/WTLFO.cpp   # [manifest] Fundamental
-MINIPLUGIN_FILES += Fundamental/src/Mixer.cpp   # [manifest] Fundamental
-MINIPLUGIN_FILES += Fundamental/src/Octave.cpp   # [manifest] Fundamental
-MINIPLUGIN_FILES += Fundamental/src/dr_wav.c   # [manifest] Fundamental
-MINIPLUGIN_FILES += ImpromptuModular/src/Clocked.cpp   # [manifest] ImpromptuModular
-MINIPLUGIN_FILES += ImpromptuModular/src/GateSeq64.cpp   # [manifest] ImpromptuModular
-MINIPLUGIN_FILES += ImpromptuModular/src/PhraseSeq32.cpp   # [manifest] ImpromptuModular
-# END MODULES-MANIFEST
 
 MINIPLUGIN_OBJS  = $(MINIPLUGIN_FILES:%=$(BUILD_DIR)/%.o)
 MINIPLUGIN_OBJS += $(MINIPLUGIN_BINARIES:%=$(BUILD_DIR)/%.bin.o)
