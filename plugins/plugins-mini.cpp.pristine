@@ -83,6 +83,7 @@ extern Model* modelLatch;
 extern Model* modelEnigmaCurryPulse;
 extern Model* modelRange;
 extern Model* modelNegativeHarmony;
+extern Model* modelEnigmaCurryMixer8;
 
 // ImpromptuModular — the pack's own ImpromptuModular.cpp is compiled into
 // plugins-mini with -DpluginInstance=pluginInstance__ImpromptuModular, so
@@ -257,14 +258,14 @@ static void initStatic__Cardinal()
         T("spl.ok() == true, adding models");
         p->addModel(modelHostAudio2);
         p->addModel(modelHostCV);
-        p->addModel(modelHostMIDI);
-        p->addModel(modelHostMIDICC);
-        p->addModel(modelHostMIDIGate);
-        p->addModel(modelHostMIDIMap);
+        spl.removeModule("HostMIDI");
+        spl.removeModule("HostMIDICC");
+        spl.removeModule("HostMIDIGate");
+        spl.removeModule("HostMIDIMap");
         p->addModel(modelHostParameters);
         p->addModel(modelHostParametersMap);
         p->addModel(modelHostTime);
-        p->addModel(modelTextEditor);
+        spl.removeModule("TextEditor");
         /* TODO
        #ifdef HAVE_FFTW3F
         p->addModel(modelAudioToCVPitch);
@@ -280,7 +281,7 @@ static void initStatic__Cardinal()
         spl.removeModule("Carla");
         spl.removeModule("ExpanderInputMIDI");
         spl.removeModule("ExpanderOutputMIDI");
-        spl.removeModule("HostAudio8");
+        p->addModel(modelHostAudio8);
         spl.removeModule("Ildaeil");
         spl.removeModule("MPV");
         spl.removeModule("SassyScope");
@@ -312,30 +313,30 @@ static void initStatic__Fundamental()
     {
         p->addModel(modelADSR);
         p->addModel(modelLFO);
-        p->addModel(modelMerge);
-        p->addModel(modelMidSide);
-        p->addModel(modelNoise);
-        p->addModel(modelQuantizer);
-        p->addModel(modelRandom);
+        spl.removeModule("Merge");
+        spl.removeModule("MidSide");
+        spl.removeModule("Noise");
+        spl.removeModule("Quantizer");
+        spl.removeModule("Random");
         p->addModel(modelScope);
-        p->addModel(modelSplit);
-        p->addModel(modelSum);
+        spl.removeModule("Split");
+        spl.removeModule("Sum");
         p->addModel(modelVCA_1);
         p->addModel(modelVCF);
-        p->addModel(modelVCMixer);
+        spl.removeModule("VCMixer");
         p->addModel(modelVCO);
         spl.removeModule("8vert");
         spl.removeModule("Delay");
-        spl.removeModule("LFO2");
-        spl.removeModule("Mixer");
+        p->addModel(modelLFO2);
+        p->addModel(modelMixer);
         spl.removeModule("Mutes");
-        spl.removeModule("Octave");
+        p->addModel(modelOctave);
         spl.removeModule("Pulses");
         spl.removeModule("SEQ3");
         spl.removeModule("SequentialSwitch1");
         spl.removeModule("SequentialSwitch2");
-        spl.removeModule("VCA");
-        spl.removeModule("VCO2");
+        p->addModel(modelVCA);
+        p->addModel(modelVCO2);
     }
 }
 
@@ -708,10 +709,12 @@ static void initStatic__EnigmaCurry()
     if (spl.ok())
     {
         p->addModel(modelTransport);
-        p->addModel(modelLatch);
-        p->addModel(modelEnigmaCurryPulse);
-        p->addModel(modelRange);
-        p->addModel(modelNegativeHarmony);
+        spl.removeModule("Latch");
+        spl.removeModule("Pulse");
+        spl.removeModule("Range");
+        spl.removeModule("NegativeHarmony");
+        // Toggled by scripts/apply-manifest.py based on modules.toml.
+        spl.removeModule("Mixer8");
     }
 }
 
@@ -723,42 +726,44 @@ static void initStatic__ImpromptuModular()
     const StaticPluginLoader spl(p, "ImpromptuModular");
     if (spl.ok())
     {
-        p->addModel(modelAdaptiveQuantizer);
-        p->addModel(modelBigButtonSeq);
-        p->addModel(modelBigButtonSeq2);
-        p->addModel(modelChordKey);
-        p->addModel(modelChordKeyExpander);
+        spl.removeModule("Adaptive-Quantizer");
+        spl.removeModule("Big-Button-Seq");
+        spl.removeModule("Big-Button-Seq2");
+        spl.removeModule("Chord-Key");
+        spl.removeModule("Chord-Key-Expander");
         p->addModel(modelClocked);
-        p->addModel(modelClockedExpander);
-        p->addModel(modelClkd);
-        p->addModel(modelCvPad);
-        p->addModel(modelFoundry);
-        p->addModel(modelFoundryExpander);
-        p->addModel(modelFourView);
+        spl.removeModule("Clocked-Expander");
+        spl.removeModule("Clocked-Clkd");
+        spl.removeModule("Cv-Pad");
+        spl.removeModule("Foundry");
+        spl.removeModule("Foundry-Expander");
+        spl.removeModule("Four-View");
         p->addModel(modelGateSeq64);
-        p->addModel(modelGateSeq64Expander);
-        p->addModel(modelHotkey);
-        p->addModel(modelPart);
-        p->addModel(modelPhraseSeq16);
+        spl.removeModule("Gate-Seq-64-Expander");
+        spl.removeModule("Hotkey");
+        spl.removeModule("Part-Gate-Split");
+        spl.removeModule("Phrase-Seq-16");
         p->addModel(modelPhraseSeq32);
-        p->addModel(modelPhraseSeqExpander);
-        p->addModel(modelProbKey);
-        p->addModel(modelSemiModularSynth);
-        p->addModel(modelSygen);
-        p->addModel(modelTact);
-        p->addModel(modelTact1);
-        p->addModel(modelTactG);
-        p->addModel(modelTwelveKey);
-        p->addModel(modelVariations);
-        p->addModel(modelWriteSeq32);
-        p->addModel(modelWriteSeq64);
-        p->addModel(modelBlankPanel);
+        spl.removeModule("Phrase-Seq-Expander");
+        spl.removeModule("Prob-Key");
+        spl.removeModule("Semi-ModularSynth");
+        spl.removeModule("Sygen");
+        spl.removeModule("Tact");
+        spl.removeModule("Tact1");
+        spl.removeModule("TactG");
+        spl.removeModule("Twelve-Key");
+        spl.removeModule("Variations");
+        spl.removeModule("Write-Seq-32");
+        spl.removeModule("Write-Seq-64");
+        spl.removeModule("Blank-Panel");
     }
 }
 
 void initStaticPlugins()
 {
-    // cardinal-web-demo: bisect which sub-init hangs under wasm+headless.
+    // BEGIN MODULES-MANIFEST — regenerated by scripts/apply-manifest.py
+    // Manifest-selected packs. Edit modules.toml and re-run
+    // `just configure-modules` to change this list.
     #define WASM_TRACE(name) do { \
         std::fprintf(stderr, "[plugins-mini] initStatic__" #name "() BEGIN\n"); \
         std::fflush(stderr); \
@@ -766,20 +771,12 @@ void initStaticPlugins()
         std::fprintf(stderr, "[plugins-mini] initStatic__" #name "() END\n"); \
         std::fflush(stderr); \
     } while (0)
-
     WASM_TRACE(Cardinal);
-    WASM_TRACE(Fundamental);
-    WASM_TRACE(Aria);
-    WASM_TRACE(AudibleInstruments);
-    WASM_TRACE(BogaudioModules);
-    WASM_TRACE(MockbaModular);
-    WASM_TRACE(surgext);
     WASM_TRACE(EnigmaCurry);
+    WASM_TRACE(Fundamental);
     WASM_TRACE(ImpromptuModular);
     #undef WASM_TRACE
-    /*
-    initStatic__ValleyAudio();
-    */
+    // END MODULES-MANIFEST
 }
 
 void destroyStaticPlugins()
@@ -791,21 +788,10 @@ void destroyStaticPlugins()
 
 void updateStaticPluginsDarkMode()
 {
+    // BEGIN MODULES-MANIFEST updateStaticPluginsDarkMode
     const bool darkMode = settings::preferDarkPanels;
-    // bogaudio
-    {
-        Skins& skins(Skins::skins());
-        skins._default = darkMode ? "dark" : "light";
-
-        std::lock_guard<std::mutex> lock(skins._defaultSkinListenersLock);
-        for (auto listener : skins._defaultSkinListeners) {
-            listener->defaultSkinChanged(skins._default);
-        }
-    }
-    // surgext
-    {
-        surgext_rack_update_theme();
-    }
+    (void)darkMode;
+    // END MODULES-MANIFEST
 }
 
 }

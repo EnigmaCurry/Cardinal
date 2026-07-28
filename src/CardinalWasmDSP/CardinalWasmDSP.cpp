@@ -283,4 +283,9 @@ int cardinal_get_input_channel_count(void)  { return CARDINAL_NUM_AUDIO_INPUTS; 
 EMSCRIPTEN_KEEPALIVE
 int cardinal_get_output_channel_count(void) { return CARDINAL_NUM_AUDIO_OUTPUTS; }
 
+// Note: cardinal_get_mixer_ctrl / cardinal_mixer_ctrl_size are exported
+// from Mixer8.cpp itself so both CardinalWasmDSP and CardinalMini expose
+// them. The EnigmaCurry pack's static archive carries both the storage
+// (g_mixer_ctrl) and the accessors.
+
 } // extern "C"

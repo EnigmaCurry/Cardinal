@@ -1887,6 +1887,21 @@ MINIRESOURCE_FILES += ImpromptuModular/res/panels/GateSeq64.svg   # [manifest] I
 MINIRESOURCE_FILES += ImpromptuModular/res/panels/PhraseSeq32.svg   # [manifest] ImpromptuModular
 # END MODULES-MANIFEST
 
+
+# BEGIN MODULES-MANIFEST resources — added by scripts/apply-manifest.py
+# SVG faces for enabled modules that Cardinal's pristine mini
+# resource list didn't bundle (without these the module loads
+# but renders as an invisible/blank slot).
+MINIRESOURCE_FILES += Fundamental/res/WTVCO.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/VCA.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/WTLFO.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/Mixer.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/Octave.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += ImpromptuModular/res/panels/Clocked.svg   # [manifest] ImpromptuModular
+MINIRESOURCE_FILES += ImpromptuModular/res/panels/GateSeq64.svg   # [manifest] ImpromptuModular
+MINIRESOURCE_FILES += ImpromptuModular/res/panels/PhraseSeq32.svg   # [manifest] ImpromptuModular
+# END MODULES-MANIFEST
+
 ifeq ($(MOD_BUILD),true)
 
 MINI_RESOURCES  = $(MINIPLUGIN_LIST:%=../bin/CardinalMini.lv2/resources/PluginManifests/%.json)
@@ -2133,6 +2148,23 @@ PLUGIN_OBJS += $(PLUGIN_BINARIES:%=$(BUILD_DIR)/%.bin.o)
 # Source files for modules the manifest enabled that Cardinal's
 # pristine mini set didn't compile (extras).
 MINIPLUGIN_FILES += EnigmaCurry/src/Transport.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += Fundamental/src/WTVCO.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/VCA.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/WTLFO.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/Mixer.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/Octave.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/dr_wav.c   # [manifest] Fundamental
+MINIPLUGIN_FILES += ImpromptuModular/src/Clocked.cpp   # [manifest] ImpromptuModular
+MINIPLUGIN_FILES += ImpromptuModular/src/GateSeq64.cpp   # [manifest] ImpromptuModular
+MINIPLUGIN_FILES += ImpromptuModular/src/PhraseSeq32.cpp   # [manifest] ImpromptuModular
+# END MODULES-MANIFEST
+
+
+# BEGIN MODULES-MANIFEST — added by scripts/apply-manifest.py
+# Source files for modules the manifest enabled that Cardinal's
+# pristine mini set didn't compile (extras).
+MINIPLUGIN_FILES += EnigmaCurry/src/Transport.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/Mixer8.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += Fundamental/src/WTVCO.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/VCA.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/WTLFO.cpp   # [manifest] Fundamental

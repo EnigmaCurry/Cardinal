@@ -83,6 +83,7 @@ extern Model* modelLatch;
 extern Model* modelEnigmaCurryPulse;
 extern Model* modelRange;
 extern Model* modelNegativeHarmony;
+extern Model* modelEnigmaCurryMixer8;
 
 // ImpromptuModular — the pack's own ImpromptuModular.cpp is compiled into
 // plugins-mini with -DpluginInstance=pluginInstance__ImpromptuModular, so
@@ -296,6 +297,7 @@ static void initStatic__Cardinal()
             modelHostParameters,
             modelHostParametersMap,
             modelHostTime,
+            modelHostAudio8,
         };
     }
     T("about to exit scope (spl dtor runs)");
@@ -712,6 +714,8 @@ static void initStatic__EnigmaCurry()
         spl.removeModule("Pulse");
         spl.removeModule("Range");
         spl.removeModule("NegativeHarmony");
+        // Toggled by scripts/apply-manifest.py based on modules.toml.
+        p->addModel(modelEnigmaCurryMixer8);
     }
 }
 
