@@ -1137,9 +1137,14 @@ void Engine::removeParamHandle(ParamHandle* paramHandle) {
 
 
 void Engine::removeParamHandle_NoLock(ParamHandle* paramHandle) {
-	// Check that the ParamHandle is already added
+	// Idempotent: modules (e.g. HostParametersMap, HostMIDIMap) call this
+	// in their destructors for each mapping, but clear_NoLock has already
+	// walked internal->paramHandles first, so by the time module dtors
+	// run the handles have been removed. Return silently instead of
+	// asserting — the "already gone" case is expected during teardown.
 	auto it = internal->paramHandles.find(paramHandle);
-	DISTRHO_SAFE_ASSERT_RETURN(it != internal->paramHandles.end(),);
+	if (it == internal->paramHandles.end())
+		return;
 
 	// Remove it
 	paramHandle->module = NULL;
@@ -1265,12 +1270,19 @@ void Engine::fromJson(json_t* rootJ) {
 		Module* const module = model->createModule();
 		DISTRHO_SAFE_ASSERT_CONTINUE(module != nullptr);
 
-		// Create the widget too, needed by a few modules
+#ifndef HEADLESS
+		// Create the widget too, needed by a few modules.
+		// Skipped in HEADLESS builds (wasm DSP-only demo) — no UI means
+		// the widget is unused and its destructor deadlocks on a
+		// second engine->clear()/patch reload (VCA-1 widget dtor hangs
+		// under Emscripten single-threaded wasm; not worth debugging
+		// widget code that's never rendered).
 		CardinalPluginModelHelper* const helper = dynamic_cast<CardinalPluginModelHelper*>(model);
 		DISTRHO_SAFE_ASSERT_CONTINUE(helper != nullptr);
 
 		app::ModuleWidget* const moduleWidget = helper->createModuleWidgetFromEngineLoad(module);
 		DISTRHO_SAFE_ASSERT_CONTINUE(moduleWidget != nullptr);
+#endif
 
 		try {
 			// This doesn't need a lock because the Module is not added to the Engine yet.
@@ -1287,7 +1299,9 @@ void Engine::fromJson(json_t* rootJ) {
 		catch (Exception& e) {
 			WARN("Cannot load module: %s", e.what());
 			// APP->patch->log(e.what());
+#ifndef HEADLESS
 			helper->removeCachedModuleWidget(module);
+#endif
 			delete module;
 			continue;
 		}

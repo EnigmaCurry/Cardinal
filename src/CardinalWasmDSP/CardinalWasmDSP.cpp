@@ -123,27 +123,21 @@ extern "C" FILE* fopen_wasm(const char* filename, const char* mode) {
 
 extern "C" {
 
-#define TRACE(msg) do { std::fprintf(stderr, "[cardinal] %s\n", msg); std::fflush(stderr); } while (0)
-
 EMSCRIPTEN_KEEPALIVE
 int cardinal_init(int sample_rate, int block_size)
 {
     if (g_pcontext != nullptr) return 0;
     if (sample_rate <= 0 || block_size <= 0) return -1;
 
-    TRACE("init: constructing CardinalPluginContext");
     g_pcontext = new CardinalPluginContext(nullptr);
     g_pcontext->sampleRate = static_cast<double>(sample_rate);
     g_pcontext->bufferSize = static_cast<uint32_t>(block_size);
     g_pcontext->playing = true;
 
-    TRACE("init: constructing rack::engine::Engine");
     g_engine = new rack::engine::Engine;
-    TRACE("init: engine->setSampleRate");
     g_engine->setSampleRate(static_cast<float>(sample_rate));
     g_pcontext->engine = g_engine;
 
-    TRACE("init: contextSet");
     rack::contextSet(g_pcontext);
 
     // Cardinal's custom/asset.cpp returns "../../plugins/X/plugin.json"
@@ -156,16 +150,13 @@ int cardinal_init(int sample_rate, int block_size)
     if (::chdir("/wasm/build") != 0) {
         std::fprintf(stderr, "[cardinal] chdir(/wasm/build) failed\n");
     }
-    TRACE("init: cwd set so ../.. == /");
 
-    TRACE("init: initStaticPlugins() — this is where things usually get slow");
     try {
         rack::plugin::initStaticPlugins();
     } catch (const std::exception& e) {
         std::fprintf(stderr, "[cardinal] initStaticPlugins threw: %s\n", e.what());
         return -2;
     }
-    TRACE("init: initStaticPlugins done");
 
     g_block_size = block_size;
     g_ins.resize(CARDINAL_NUM_AUDIO_INPUTS);
@@ -175,10 +166,8 @@ int cardinal_init(int sample_rate, int block_size)
     g_pcontext->dataIns  = asConstPP(g_ins);
     g_pcontext->dataOuts = g_outs.data();
 
-    TRACE("init: done");
     return 0;
 }
-#undef TRACE
 
 EMSCRIPTEN_KEEPALIVE
 int cardinal_load_patch_json(const char* json_str)
