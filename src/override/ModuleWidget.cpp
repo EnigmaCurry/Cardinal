@@ -519,28 +519,24 @@ void ModuleWidget::onDragMove(const DragMoveEvent& e) {
 				APP->scene->rack->setSelectionPosNearest(delta);
 			}
 			else {
-				// In fixed-rack mode use the *Bounded shove variants — they run
-				// the same squeeze/force algorithm as infinite mode, but treat
-				// the whole rearrangement atomically: if any module would end up
-				// outside the box, the entire operation is reverted so the drag
-				// "butts up" against the wall while still allowing rearrangement
-				// when there's room for everyone.
-				if (settings::squeezeModules) {
-					if (settings::rackspaceFixed)
-						APP->scene->rack->setModulePosSqueezeBounded(this, pos);
-					else
-						APP->scene->rack->setModulePosSqueeze(this, pos);
+				// In fixed-rack mode always use force-shove (bounded): squeeze's
+				// "place left of right neighbor" branch is fine in infinite mode
+				// where negative grid positions exist, but in a fixed rack it
+				// would push the module outside the box. Force-shove always
+				// makes room by pushing neighbors outward from the target, and
+				// the bounded wrapper reverts if any module ends up out of
+				// bounds — so drags near the edge naturally butt up.
+				if (settings::rackspaceFixed) {
+					APP->scene->rack->setModulePosForceBounded(this, pos);
+				}
+				else if (settings::squeezeModules) {
+					APP->scene->rack->setModulePosSqueeze(this, pos);
 				}
 				else {
-					if ((APP->window->getMods() & RACK_MOD_MASK) == RACK_MOD_CTRL) {
-						if (settings::rackspaceFixed)
-							APP->scene->rack->setModulePosForceBounded(this, pos);
-						else
-							APP->scene->rack->setModulePosForce(this, pos);
-					}
-					else {
+					if ((APP->window->getMods() & RACK_MOD_MASK) == RACK_MOD_CTRL)
+						APP->scene->rack->setModulePosForce(this, pos);
+					else
 						APP->scene->rack->setModulePosNearest(this, pos);
-					}
 				}
 			}
 		}

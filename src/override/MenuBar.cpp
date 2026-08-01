@@ -694,6 +694,48 @@ struct RackspaceWidthSlider : ui::Slider {
 };
 
 
+struct RackspaceBorderQuantity : Quantity {
+	void setValue(float value) override {
+		settings::rackspaceBorderU = math::clamp(value, getMinValue(), getMaxValue());
+	}
+	float getValue() override {
+		return settings::rackspaceBorderU;
+	}
+	float getMinValue() override {
+		return 0.f;
+	}
+	float getMaxValue() override {
+		return 0.5f;
+	}
+	float getDefaultValue() override {
+		return 0.1f;
+	}
+	float getDisplayValue() override {
+		return getValue();
+	}
+	void setDisplayValue(float displayValue) override {
+		setValue(displayValue);
+	}
+	std::string getLabel() override {
+		return "Border width";
+	}
+	std::string getUnit() override {
+		return " U";
+	}
+	int getDisplayPrecision() override {
+		return 2;
+	}
+};
+struct RackspaceBorderSlider : ui::Slider {
+	RackspaceBorderSlider() {
+		quantity = new RackspaceBorderQuantity;
+	}
+	~RackspaceBorderSlider() {
+		delete quantity;
+	}
+};
+
+
 #if DISTRHO_PLUGIN_WANT_DIRECT_ACCESS
 static void setAllFramebufferWidgetsDirty(widget::Widget* const widget)
 {
@@ -761,6 +803,10 @@ struct ViewButton : MenuButton {
 			RackspaceWidthSlider* widthSlider = new RackspaceWidthSlider;
 			widthSlider->box.size.x = 250.0;
 			menu->addChild(widthSlider);
+
+			RackspaceBorderSlider* borderSlider = new RackspaceBorderSlider;
+			borderSlider->box.size.x = 250.0;
+			menu->addChild(borderSlider);
 		}
 
 		menu->addChild(new ui::MenuSeparator);
