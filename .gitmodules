@@ -1,6 +1,7 @@
 [submodule "plugins/Cardinal/Rack"]
 	path = src/Rack
-	url = https://github.com/VCVRack/Rack.git
+	url = git@github.com:EnigmaCurry/VCVRack.git
+	branch = fixed-rack
 	ignore = dirty
 [submodule "dpf"]
 	path = dpf
