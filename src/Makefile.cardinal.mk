@@ -185,7 +185,7 @@ endif
 # --------------------------------------------------------------
 # Setup resources
 
-CORE_RESOURCES  = $(subst ../Rack/res/,,$(wildcard ../Rack/res/ComponentLibrary/*.svg ../Rack/res/fonts/*.ttf))
+CORE_RESOURCES  = $(subst ../Rack/res/,,$(wildcard ../Rack/res/ComponentLibrary/*.svg ../Rack/res/ComponentLibrary/*.jpg ../Rack/res/fonts/*.ttf))
 # ifneq ($(CARDINAL_VARIANT),mini)
 CORE_RESOURCES += patches
 # endif

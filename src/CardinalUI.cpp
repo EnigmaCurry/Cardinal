@@ -1294,8 +1294,88 @@ END_NAMESPACE_DISTRHO
 
 #ifdef DISTRHO_OS_WASM
 #include <emscripten/emscripten.h>
+#include <cmath>
+#include <app/common.hpp>
 
 extern "C" {
+
+// -----------------------------------------------------------------------------
+// Fixed-rack overlay API.
+//
+// The wasm-web-demo /overlay/ page floats Cardinal Mini on top of another
+// webapp. It sizes an HTML canvas to a specific rack pixel dimension, then
+// asks Cardinal to (a) fix the rack to a given HP x rows box, (b) draw a
+// wooden border of a given thickness, and (c) optionally sink the menu bar
+// into that top border strip so the whole rendered quad is self-contained.
+//
+// These setters just mutate settings::rackspace* — the Rack code paths
+// (Scene::step, RackWidget::draw, RackScrollWidget::step) read them each
+// frame, so no explicit "commit" call is needed. cardinal_get_rack_pixel_size
+// reports the outer bounding box (rack + 2*border stroke) so JS can size
+// the CSS quad to match Cardinal's render exactly.
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_rack_size(int hp, int rows)
+{
+    hp   = rack::math::clamp(hp,   4, 168);
+    rows = rack::math::clamp(rows, 1, 8);
+    rack::settings::rackspaceFixed   = true;
+    rack::settings::rackspaceWidthHP = hp;
+    rack::settings::rackspaceRows    = rows;
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_border_u(float u)
+{
+    rack::settings::rackspaceBorderU = rack::math::clamp(u, 0.f, 0.5f);
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_menu_in_border(int on)
+{
+    rack::settings::rackspaceMenuInBorder = (on != 0);
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_fill_viewport(int on)
+{
+    rack::settings::rackspaceFillViewport = (on != 0);
+    return 0;
+}
+
+// Returns 1 if the module browser overlay is currently visible. JS uses this
+// on pointerdown to skip its border-drag interception when the browser is
+// open — otherwise the browser's right-edge scrollbar (drawn at the very
+// right of the scene) would land inside JS's border zone and never see
+// scrollbar clicks.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_browser_visible(void)
+{
+    rack::Context* const ctx = rack::contextGet();
+    if (ctx == nullptr || ctx->scene == nullptr || ctx->scene->browser == nullptr)
+        return 0;
+    return ctx->scene->browser->isVisible() ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_get_rack_pixel_size(int* const w, int* const h)
+{
+    if (w == nullptr || h == nullptr)
+        return -1;
+    // Frame stroke straddles the rack box edge, extending stroke pixels
+    // outward on each side (see RackWidget::draw). Total outer box is
+    // rack + 2 * stroke. Match that here so the JS-sized canvas is a
+    // pixel-exact fit for what Cardinal is about to draw.
+    const float stroke = rack::settings::rackspaceBorderU * (rack::app::RACK_GRID_HEIGHT / 3.f);
+    const float outerW = rack::settings::rackspaceWidthHP * rack::app::RACK_GRID_WIDTH  + 2.f * stroke;
+    const float outerH = rack::settings::rackspaceRows    * rack::app::RACK_GRID_HEIGHT + 2.f * stroke;
+    *w = (int) std::ceil(outerW);
+    *h = (int) std::ceil(outerH);
+    return 0;
+}
 
 EMSCRIPTEN_KEEPALIVE
 int cardinal_load_patch_path(const char* const pathC)
