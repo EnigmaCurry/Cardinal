@@ -309,7 +309,13 @@ public:
             (rack::patchFromURL = getPatchFileEncodedInURL()) == nullptr)
        #endif
         {
+           #if !CARDINAL_VARIANT_MINI
+            // Mini is the wasm overlay variant — JS drives the patch, no
+            // template. A fresh Manager is already empty, so we just skip
+            // loadTemplate() rather than clear it (which would touch scene
+            // internals before they're fully initialised).
             context->patch->loadTemplate();
+           #endif
             context->scene->rackScroll->reset();
         }
 

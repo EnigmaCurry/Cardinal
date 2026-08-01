@@ -290,6 +290,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
 
 // -----------------------------------------------------------------------------------------------------------
 
+// Wasm-only: the JS-side C API functions run from callbacks where nobody
+// has set the thread-local rack context (Cardinal only sets/unsets it
+// around its own UI callbacks via ScopedContext). Save the current UI's
+// context here at construction so the C entry points can restore it
+// before any APP-macro / contextGet-based Rack call.
+static CardinalPluginContext* s_wasm_ctx = nullptr;
+
 class CardinalUI : public CardinalBaseUI,
                    public WindowParametersCallback
 {
@@ -350,6 +357,7 @@ public:
           lastMousePos()
     {
         rack::contextSet(context);
+        s_wasm_ctx = context;
 
        #if CARDINAL_VARIANT_MINI && ! DISTRHO_PLUGIN_WANT_DIRECT_ACCESS
         // create unique temporary path for this instance
@@ -1354,10 +1362,98 @@ int cardinal_set_fill_viewport(int on)
 EMSCRIPTEN_KEEPALIVE
 int cardinal_browser_visible(void)
 {
-    rack::Context* const ctx = rack::contextGet();
-    if (ctx == nullptr || ctx->scene == nullptr || ctx->scene->browser == nullptr)
-        return 0;
-    return ctx->scene->browser->isVisible() ? 1 : 0;
+    if (s_wasm_ctx == nullptr || s_wasm_ctx->scene == nullptr
+        || s_wasm_ctx->scene->browser == nullptr) return 0;
+    return s_wasm_ctx->scene->browser->isVisible() ? 1 : 0;
+}
+
+// Wipe the current patch — engine cleared, no modules, blank rack. The
+// overlay demo calls this after boot to skip the default template so it
+// starts as an empty fixed rack.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_clear_patch(void)
+{
+    if (s_wasm_ctx == nullptr || s_wasm_ctx->patch == nullptr) return -1;
+    // patch->clear() internally uses the APP macro (contextGet), so we
+    // must set the thread-local context ourselves — JS entry points don't
+    // come in under Cardinal's ScopedContext.
+    rack::contextSet(s_wasm_ctx);
+    try { s_wasm_ctx->patch->clear(); }
+    catch (...) { return -2; }
+    return 0;
+}
+
+// Dump the current engine state as a JSON string tailored for the JS-side
+// patch-graph renderer. Structure:
+//   { "modules": [ {"id":N,"brand":"...","name":"...","slug":"...",
+//                   "inputs":[{"id":I,"name":"..."},...],
+//                   "outputs":[{"id":I,"name":"..."},...]}, ... ],
+//     "cables":  [ {"outMod":N,"outId":I,"inMod":N,"inId":I}, ... ] }
+// Returned pointer is valid until the next call — caller must NOT free.
+static std::string g_patch_json_cache;
+
+EMSCRIPTEN_KEEPALIVE
+const char* cardinal_get_patch_json(void)
+{
+    rack::Context* const ctx = s_wasm_ctx;
+    if (ctx == nullptr || ctx->engine == nullptr) {
+        g_patch_json_cache = "{\"modules\":[],\"cables\":[]}";
+        return g_patch_json_cache.c_str();
+    }
+    // engine methods may reach for APP internally — set the thread-local
+    // so contextGet doesn't assert / return null.
+    rack::contextSet(ctx);
+    json_t* rootJ = json_object();
+    json_t* modulesJ = json_array();
+    for (int64_t moduleId : ctx->engine->getModuleIds()) {
+        rack::engine::Module* const m = ctx->engine->getModule(moduleId);
+        if (m == nullptr || m->model == nullptr) continue;
+        json_t* modJ = json_object();
+        json_object_set_new(modJ, "id",   json_integer(moduleId));
+        json_object_set_new(modJ, "slug", json_string(m->model->slug.c_str()));
+        json_object_set_new(modJ, "name", json_string(m->model->name.c_str()));
+        if (m->model->plugin != nullptr)
+            json_object_set_new(modJ, "brand", json_string(m->model->plugin->brand.c_str()));
+        json_t* insJ = json_array();
+        for (size_t i = 0; i < m->inputInfos.size(); ++i) {
+            json_t* pJ = json_object();
+            json_object_set_new(pJ, "id", json_integer((int) i));
+            if (m->inputInfos[i] != nullptr)
+                json_object_set_new(pJ, "name", json_string(m->inputInfos[i]->name.c_str()));
+            json_array_append_new(insJ, pJ);
+        }
+        json_object_set_new(modJ, "inputs", insJ);
+        json_t* outsJ = json_array();
+        for (size_t i = 0; i < m->outputInfos.size(); ++i) {
+            json_t* pJ = json_object();
+            json_object_set_new(pJ, "id", json_integer((int) i));
+            if (m->outputInfos[i] != nullptr)
+                json_object_set_new(pJ, "name", json_string(m->outputInfos[i]->name.c_str()));
+            json_array_append_new(outsJ, pJ);
+        }
+        json_object_set_new(modJ, "outputs", outsJ);
+        json_array_append_new(modulesJ, modJ);
+    }
+    json_object_set_new(rootJ, "modules", modulesJ);
+    json_t* cablesJ = json_array();
+    for (int64_t cableId : ctx->engine->getCableIds()) {
+        rack::engine::Cable* const c = ctx->engine->getCable(cableId);
+        if (c == nullptr || c->inputModule == nullptr || c->outputModule == nullptr) continue;
+        json_t* cJ = json_object();
+        json_object_set_new(cJ, "outMod", json_integer(c->outputModule->id));
+        json_object_set_new(cJ, "outId",  json_integer(c->outputId));
+        json_object_set_new(cJ, "inMod",  json_integer(c->inputModule->id));
+        json_object_set_new(cJ, "inId",   json_integer(c->inputId));
+        json_array_append_new(cablesJ, cJ);
+    }
+    json_object_set_new(rootJ, "cables", cablesJ);
+    char* const s = json_dumps(rootJ, JSON_COMPACT);
+    json_decref(rootJ);
+    if (s != nullptr) {
+        g_patch_json_cache.assign(s);
+        std::free(s);
+    }
+    return g_patch_json_cache.c_str();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -1382,17 +1478,15 @@ int cardinal_load_patch_path(const char* const pathC)
 {
     if (pathC == nullptr || pathC[0] == '\0')
         return -1;
-    rack::Context* const ctx = rack::contextGet();
-    if (ctx == nullptr)
-        return -2;
-    if (ctx->patch == nullptr)
-        return -3;
+    if (s_wasm_ctx == nullptr) return -2;
+    if (s_wasm_ctx->patch == nullptr) return -3;
+    rack::contextSet(s_wasm_ctx);
     try {
         // loadAction: clears the engine, load(path), sets patch path,
         // marks history as saved, pushes to recent-paths list. Same
         // code path Cardinal's File → Import runs, so any threading or
         // engine-lock concerns are the same as a normal user load.
-        ctx->patch->loadAction(std::string(pathC));
+        s_wasm_ctx->patch->loadAction(std::string(pathC));
     } catch (...) {
         return -4;
     }
@@ -1405,13 +1499,11 @@ int cardinal_load_patch_path(const char* const pathC)
 EMSCRIPTEN_KEEPALIVE
 int cardinal_save_autosave(void)
 {
-    rack::Context* const ctx = rack::contextGet();
-    if (ctx == nullptr)
-        return -2;
-    if (ctx->patch == nullptr)
-        return -3;
+    if (s_wasm_ctx == nullptr) return -2;
+    if (s_wasm_ctx->patch == nullptr) return -3;
+    rack::contextSet(s_wasm_ctx);
     try {
-        ctx->patch->saveAutosave();
+        s_wasm_ctx->patch->saveAutosave();
     } catch (...) {
         return -4;
     }
