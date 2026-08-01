@@ -2228,6 +2228,8 @@ static void initStatic__EnigmaCurry()
       p->addModel(modelPulse);
       p->addModel(modelRange);
       p->addModel(modelNegativeHarmony);
+      p->addModel(modelEnigmaCurryMixer8);
+      p->addModel(modelEnigmaCurryTrackerHost);
 #undef modelPulse
     }
 }

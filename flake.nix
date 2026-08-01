@@ -1,5 +1,5 @@
 {
-  description = "Cardinal — FHS build environment for CardinalWasmDSP";
+  description = "Cardinal — FHS build environment (CardinalWasmDSP + native GUI)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -19,7 +19,8 @@
         # behaves as it would on Ubuntu.
         #
         # We use this both in the CI workflow (.github/workflows/build-wasmdsp.yml)
-        # and locally when developing the CardinalWasmDSP subproject.
+        # and locally for the CardinalWasmDSP subproject *and* for the native
+        # Cardinal GUI builds (`make jack`, `make native`).
         fhsEnv = pkgs.buildFHSEnv {
           name = "cardinal-fhs";
 
@@ -83,7 +84,53 @@
             glibc
 
             git
+
+            # ----------------------------------------------------------------
+            # Native Cardinal GUI (`make jack` / `make native`) dependencies.
+            # Mirrors the Debian/Ubuntu apt list in .github/workflows/build.yml:
+            #   libasound2-dev libdbus-1-dev libgl1-mesa-dev liblo-dev
+            #   libsdl2-dev libx11-dev libxcursor-dev libxext-dev libxrandr-dev
+            #
+            # buildFHSEnv only symlinks each package's default `out` output
+            # into /usr, so we also list `.dev` for anything multi-output —
+            # otherwise headers and .pc files aren't visible in /usr/include
+            # and /usr/lib/pkgconfig.
+            # ----------------------------------------------------------------
+            # OpenGL (provides /usr/include/GL/gl.h via libglvnd + mesa headers).
+            libglvnd libglvnd.dev
+            libGLU libGLU.dev
+            mesa
+            # X11 client libs Cardinal / DPF / GLFW link against.
+            libx11 libx11.dev
+            libxext libxext.dev
+            libxrandr libxrandr.dev
+            libxcursor libxcursor.dev
+            libxinerama libxinerama.dev
+            libxi libxi.dev
+            libxfixes libxfixes.dev
+            libxrender libxrender.dev
+            libpthread-stubs
+            libxau libxau.dev
+            libxdmcp libxdmcp.dev
+            xorgproto
+            # Audio / MIDI backends.
+            alsa-lib alsa-lib.dev
+            libjack2 libjack2.dev
+            libpulseaudio libpulseaudio.dev
+            # Cardinal-specific runtime deps.
+            liblo
+            dbus dbus.dev
+            freetype freetype.dev
+            fontconfig fontconfig.dev
+            SDL2 SDL2.dev
           ];
+
+          # Nix-built pkg-config bakes its default search path to its own
+          # store lib/share dirs, so it doesn't see the FHS's .pc files.
+          # Point it at /usr/{lib,share}/pkgconfig the way Debian does.
+          profile = ''
+            export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig''${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          '';
 
           runScript = pkgs.writeShellScript "cardinal-fhs-run" ''
             if [ $# -eq 0 ]; then

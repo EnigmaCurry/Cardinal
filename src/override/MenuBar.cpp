@@ -599,6 +599,101 @@ struct KnobScrollSensitivitySlider : ui::Slider {
 };
 
 
+// Slider::onDragMove feeds Quantity::moveValue tiny per-frame deltas which
+// are re-read via getValue(). If getValue() returned the int setting we'd
+// truncate the sub-integer accumulator every frame and the drag would never
+// cross a step. Keep a private float accumulator per-quantity; the int
+// setting only latches when the accumulator crosses to a new step.
+struct RackspaceRowsQuantity : Quantity {
+	float acc;
+	RackspaceRowsQuantity() : acc((float) settings::rackspaceRows) {}
+	void setValue(float value) override {
+		acc = math::clamp(value, getMinValue(), getMaxValue());
+		settings::rackspaceRows = (int) std::round(acc);
+	}
+	float getValue() override {
+		return acc;
+	}
+	float getMinValue() override {
+		return 1.f;
+	}
+	float getMaxValue() override {
+		return 8.f;
+	}
+	float getDefaultValue() override {
+		return 8.f;
+	}
+	float getDisplayValue() override {
+		return (float) settings::rackspaceRows * 3.f;
+	}
+	void setDisplayValue(float displayValue) override {
+		setValue(displayValue / 3.f);
+	}
+	std::string getLabel() override {
+		return "Rack height";
+	}
+	std::string getUnit() override {
+		return "U";
+	}
+	int getDisplayPrecision() override {
+		return 2;
+	}
+};
+struct RackspaceRowsSlider : ui::Slider {
+	RackspaceRowsSlider() {
+		quantity = new RackspaceRowsQuantity;
+	}
+	~RackspaceRowsSlider() {
+		delete quantity;
+	}
+};
+
+
+struct RackspaceWidthQuantity : Quantity {
+	float acc;
+	RackspaceWidthQuantity() : acc((float) settings::rackspaceWidthHP) {}
+	void setValue(float value) override {
+		acc = math::clamp(value, getMinValue(), getMaxValue());
+		settings::rackspaceWidthHP = (int) std::round(acc);
+	}
+	float getValue() override {
+		return acc;
+	}
+	float getMinValue() override {
+		return 4.f;
+	}
+	float getMaxValue() override {
+		return 168.f;
+	}
+	float getDefaultValue() override {
+		return 168.f;
+	}
+	float getDisplayValue() override {
+		return (float) settings::rackspaceWidthHP;
+	}
+	void setDisplayValue(float displayValue) override {
+		setValue(displayValue);
+	}
+	std::string getLabel() override {
+		return "Rack width";
+	}
+	std::string getUnit() override {
+		return " HP";
+	}
+	int getDisplayPrecision() override {
+		return 3;
+	}
+};
+struct RackspaceWidthSlider : ui::Slider {
+	RackspaceWidthSlider() {
+		quantity = new RackspaceWidthQuantity;
+	}
+	~RackspaceWidthSlider() {
+		delete quantity;
+	}
+};
+
+
 #if DISTRHO_PLUGIN_WANT_DIRECT_ACCESS
 static void setAllFramebufferWidgetsDirty(widget::Widget* const widget)
 {
@@ -652,6 +747,21 @@ struct ViewButton : MenuButton {
 		HaloBrightnessSlider* haloBrightnessSlider = new HaloBrightnessSlider;
 		haloBrightnessSlider->box.size.x = 250.0;
 		menu->addChild(haloBrightnessSlider);
+
+		menu->addChild(new ui::MenuSeparator);
+		menu->addChild(createMenuLabel("Rackspace"));
+
+		menu->addChild(createBoolPtrMenuItem("Fixed rack size", "", &settings::rackspaceFixed));
+
+		if (settings::rackspaceFixed) {
+			RackspaceRowsSlider* rowsSlider = new RackspaceRowsSlider;
+			rowsSlider->box.size.x = 250.0;
+			menu->addChild(rowsSlider);
+
+			RackspaceWidthSlider* widthSlider = new RackspaceWidthSlider;
+			widthSlider->box.size.x = 250.0;
+			menu->addChild(widthSlider);
+		}
 
 		menu->addChild(new ui::MenuSeparator);
 		menu->addChild(createMenuLabel("Module dragging"));

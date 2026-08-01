@@ -519,14 +519,28 @@ void ModuleWidget::onDragMove(const DragMoveEvent& e) {
 				APP->scene->rack->setSelectionPosNearest(delta);
 			}
 			else {
+				// In fixed-rack mode use the *Bounded shove variants — they run
+				// the same squeeze/force algorithm as infinite mode, but treat
+				// the whole rearrangement atomically: if any module would end up
+				// outside the box, the entire operation is reverted so the drag
+				// "butts up" against the wall while still allowing rearrangement
+				// when there's room for everyone.
 				if (settings::squeezeModules) {
-					APP->scene->rack->setModulePosSqueeze(this, pos);
+					if (settings::rackspaceFixed)
+						APP->scene->rack->setModulePosSqueezeBounded(this, pos);
+					else
+						APP->scene->rack->setModulePosSqueeze(this, pos);
 				}
 				else {
-					if ((APP->window->getMods() & RACK_MOD_MASK) == RACK_MOD_CTRL)
-						APP->scene->rack->setModulePosForce(this, pos);
-					else
+					if ((APP->window->getMods() & RACK_MOD_MASK) == RACK_MOD_CTRL) {
+						if (settings::rackspaceFixed)
+							APP->scene->rack->setModulePosForceBounded(this, pos);
+						else
+							APP->scene->rack->setModulePosForce(this, pos);
+					}
+					else {
 						APP->scene->rack->setModulePosNearest(this, pos);
+					}
 				}
 			}
 		}
