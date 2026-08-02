@@ -599,6 +599,17 @@ struct KnobScrollSensitivitySlider : ui::Slider {
 };
 
 
+// Multi-region indirection helper. Slider setValue() writes go to the active
+// region if one exists — writing to legacy scalars gets clobbered next frame
+// by RackWidget::step's publish-into-legacy. getValue() still reads the
+// legacy scalar because publish-into-legacy keeps it in sync with the active
+// region every frame.
+static settings::RackRegion* activeRegionOrNull() {
+	const int i = settings::rackspaceActiveRegion;
+	if (i < 0 || i >= (int) settings::rackspaceRegions.size()) return nullptr;
+	return &settings::rackspaceRegions[i];
+}
+
 // Slider::onDragMove feeds Quantity::moveValue tiny per-frame deltas which
 // are re-read via getValue(). If getValue() returned the int setting we'd
 // truncate the sub-integer accumulator every frame and the drag would never
@@ -609,7 +620,9 @@ struct RackspaceRowsQuantity : Quantity {
 	RackspaceRowsQuantity() : acc((float) settings::rackspaceRows) {}
 	void setValue(float value) override {
 		acc = math::clamp(value, getMinValue(), getMaxValue());
-		settings::rackspaceRows = (int) std::round(acc);
+		const int v = (int) std::round(acc);
+		if (auto* r = activeRegionOrNull()) r->heightRows = v;
+		else settings::rackspaceRows = v;
 	}
 	float getValue() override {
 		return acc;
@@ -654,7 +667,9 @@ struct RackspaceWidthQuantity : Quantity {
 	RackspaceWidthQuantity() : acc((float) settings::rackspaceWidthHP) {}
 	void setValue(float value) override {
 		acc = math::clamp(value, getMinValue(), getMaxValue());
-		settings::rackspaceWidthHP = (int) std::round(acc);
+		const int v = (int) std::round(acc);
+		if (auto* r = activeRegionOrNull()) r->widthHP = v;
+		else settings::rackspaceWidthHP = v;
 	}
 	float getValue() override {
 		return acc;
@@ -696,7 +711,9 @@ struct RackspaceWidthSlider : ui::Slider {
 
 struct RackspaceBorderQuantity : Quantity {
 	void setValue(float value) override {
-		settings::rackspaceBorderU = math::clamp(value, getMinValue(), getMaxValue());
+		const float v = math::clamp(value, getMinValue(), getMaxValue());
+		if (auto* r = activeRegionOrNull()) r->borderU = v;
+		else settings::rackspaceBorderU = v;
 	}
 	float getValue() override {
 		return settings::rackspaceBorderU;
@@ -734,6 +751,102 @@ struct RackspaceBorderSlider : ui::Slider {
 		delete quantity;
 	}
 };
+
+
+// Offset sliders — only visible when a region is active (they'd be no-ops
+// otherwise, since offset is only meaningful for a region view). Range is
+// generous so a demo layout can put regions far apart; internal storage
+// clamps are wider still.
+struct RackspaceOffsetHPQuantity : Quantity {
+	float acc;
+	RackspaceOffsetHPQuantity() : acc((float) settings::rackspaceOffsetHP) {}
+	void setValue(float value) override {
+		acc = math::clamp(value, getMinValue(), getMaxValue());
+		const int v = (int) std::round(acc);
+		if (auto* r = activeRegionOrNull()) r->offsetHP = v;
+		else settings::rackspaceOffsetHP = v;
+	}
+	float getValue() override { return acc; }
+	float getMinValue() override { return -400.f; }
+	float getMaxValue() override { return  400.f; }
+	float getDefaultValue() override { return 0.f; }
+	float getDisplayValue() override { return (float) settings::rackspaceOffsetHP; }
+	void setDisplayValue(float v) override { setValue(v); }
+	std::string getLabel() override { return "Offset X"; }
+	std::string getUnit() override { return " HP"; }
+	int getDisplayPrecision() override { return 4; }
+};
+struct RackspaceOffsetHPSlider : ui::Slider {
+	RackspaceOffsetHPSlider() { quantity = new RackspaceOffsetHPQuantity; }
+	~RackspaceOffsetHPSlider() { delete quantity; }
+};
+
+
+struct RackspaceOffsetRowQuantity : Quantity {
+	float acc;
+	RackspaceOffsetRowQuantity() : acc((float) settings::rackspaceOffsetRow) {}
+	void setValue(float value) override {
+		acc = math::clamp(value, getMinValue(), getMaxValue());
+		const int v = (int) std::round(acc);
+		if (auto* r = activeRegionOrNull()) r->offsetRow = v;
+		else settings::rackspaceOffsetRow = v;
+	}
+	float getValue() override { return acc; }
+	float getMinValue() override { return -40.f; }
+	float getMaxValue() override { return  40.f; }
+	float getDefaultValue() override { return 0.f; }
+	float getDisplayValue() override { return (float) settings::rackspaceOffsetRow * 3.f; }
+	void setDisplayValue(float v) override { setValue(v / 3.f); }
+	std::string getLabel() override { return "Offset Y"; }
+	std::string getUnit() override { return " U"; }
+	int getDisplayPrecision() override { return 3; }
+};
+struct RackspaceOffsetRowSlider : ui::Slider {
+	RackspaceOffsetRowSlider() { quantity = new RackspaceOffsetRowQuantity; }
+	~RackspaceOffsetRowSlider() { delete quantity; }
+};
+
+
+// Create a default region at the current viewport center and set it active.
+// Called when the user toggles "Fixed rack size" ON with no regions defined,
+// or clicks Add region from the menu. Auto-picks the first unused
+// "Region N" name so the region list stays scannable.
+static void bootstrapDefaultRegion() {
+	settings::RackRegion r;
+	r.kind       = "atomic";
+	// Auto-name: pick the first "Region N" not already in use.
+	int n = 1;
+	while (true) {
+		const std::string candidate = "Region " + std::to_string(n);
+		bool taken = false;
+		for (const settings::RackRegion& existing : settings::rackspaceRegions) {
+			if (existing.name == candidate) { taken = true; break; }
+		}
+		if (!taken) { r.name = candidate; break; }
+		++n;
+	}
+	// Use current legacy scalars as size hints — reproduces the pre-region
+	// look for a user who just enabled the fixed rack for the first time.
+	r.widthHP    = settings::rackspaceWidthHP;
+	r.heightRows = settings::rackspaceRows;
+	r.borderU    = settings::rackspaceBorderU;
+	// Center the region on the current viewport: convert scroll grid-offset
+	// (which is where the viewport center currently maps into rack coords)
+	// into HP/row grid units relative to RACK_OFFSET, then back off half the
+	// region size so the region straddles the viewport centre.
+	int centerHP  = 0;
+	int centerRow = 0;
+	if (APP != nullptr && APP->scene != nullptr && APP->scene->rackScroll != nullptr) {
+		const math::Vec gridOff = APP->scene->rackScroll->getGridOffset();
+		centerHP  = (int) std::round(-gridOff.x / RACK_GRID_WIDTH);
+		centerRow = (int) std::round(-gridOff.y / RACK_GRID_HEIGHT);
+	}
+	r.offsetHP   = centerHP  - r.widthHP    / 2;
+	r.offsetRow  = centerRow - r.heightRows / 2;
+	r.visible    = true;
+	settings::rackspaceRegions.push_back(r);
+	settings::rackspaceActiveRegion = (int) settings::rackspaceRegions.size() - 1;
+}
 
 
 #if DISTRHO_PLUGIN_WANT_DIRECT_ACCESS
@@ -793,9 +906,61 @@ struct ViewButton : MenuButton {
 		menu->addChild(new ui::MenuSeparator);
 		menu->addChild(createMenuLabel("Rackspace"));
 
-		menu->addChild(createBoolPtrMenuItem("Fixed rack size", "", &settings::rackspaceFixed));
+		// Toggling "Fixed rack size" ON with no regions defined auto-creates
+		// one at the current viewport centre — otherwise the fixed rack has
+		// nothing to point at and the user just sees an empty frame at
+		// RACK_OFFSET, which is confusing.
+		menu->addChild(createCheckMenuItem("Fixed rack size", "",
+			[]() { return settings::rackspaceFixed; },
+			[]() {
+				const bool willEnable = !settings::rackspaceFixed;
+				settings::rackspaceFixed = willEnable;
+				if (willEnable && settings::rackspaceRegions.empty()) {
+					bootstrapDefaultRegion();
+				}
+			}
+		));
 
 		if (settings::rackspaceFixed) {
+			const int nRegions = (int) settings::rackspaceRegions.size();
+			const int activeIdx = settings::rackspaceActiveRegion;
+
+			// Region picker — hidden with only one region (or zero) to keep
+			// the menu tidy for single-rack patches.
+			if (nRegions > 1) {
+				std::string activeName = "(none)";
+				if (activeIdx >= 0 && activeIdx < nRegions)
+					activeName = settings::rackspaceRegions[activeIdx].name;
+				menu->addChild(createSubmenuItem("Region", activeName, [](ui::Menu* subMenu) {
+					const int n = (int) settings::rackspaceRegions.size();
+					for (int i = 0; i < n; ++i) {
+						subMenu->addChild(createCheckMenuItem(
+							settings::rackspaceRegions[i].name, "",
+							[i]() { return settings::rackspaceActiveRegion == i; },
+							[i]() { settings::rackspaceActiveRegion = i; }
+						));
+					}
+				}));
+			}
+
+			// Region-management submenu.
+			menu->addChild(createSubmenuItem("Regions…", "", [](ui::Menu* subMenu) {
+				subMenu->addChild(createMenuItem("Add region", "", []() {
+					bootstrapDefaultRegion();
+				}));
+				subMenu->addChild(createMenuItem("Delete active", "", []() {
+					const int i = settings::rackspaceActiveRegion;
+					if (i < 0 || i >= (int) settings::rackspaceRegions.size()) return;
+					settings::rackspaceRegions.erase(settings::rackspaceRegions.begin() + i);
+					if (settings::rackspaceRegions.empty())
+						settings::rackspaceActiveRegion = -1;
+					else if (settings::rackspaceActiveRegion >= (int) settings::rackspaceRegions.size())
+						settings::rackspaceActiveRegion = (int) settings::rackspaceRegions.size() - 1;
+				}));
+			}));
+
+			// Geometry sliders — setValue routes to the active region if any,
+			// so drags Just Work on multi-region patches.
 			RackspaceRowsSlider* rowsSlider = new RackspaceRowsSlider;
 			rowsSlider->box.size.x = 250.0;
 			menu->addChild(rowsSlider);
@@ -807,6 +972,21 @@ struct ViewButton : MenuButton {
 			RackspaceBorderSlider* borderSlider = new RackspaceBorderSlider;
 			borderSlider->box.size.x = 250.0;
 			menu->addChild(borderSlider);
+
+			// Offset sliders — only meaningful when a region is active; hide
+			// otherwise so single-region-legacy patches don't get confused UI.
+			if (activeIdx >= 0 && activeIdx < nRegions) {
+				RackspaceOffsetHPSlider* offXSlider = new RackspaceOffsetHPSlider;
+				offXSlider->box.size.x = 250.0;
+				menu->addChild(offXSlider);
+
+				RackspaceOffsetRowSlider* offYSlider = new RackspaceOffsetRowSlider;
+				offYSlider->box.size.x = 250.0;
+				menu->addChild(offYSlider);
+			}
+
+			menu->addChild(createBoolPtrMenuItem("Menu bar inside top border", "",
+				&settings::rackspaceMenuInBorder));
 		}
 
 		menu->addChild(new ui::MenuSeparator);

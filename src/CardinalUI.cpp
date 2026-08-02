@@ -1455,6 +1455,35 @@ int cardinal_delete_region(int idx)
     return 0;
 }
 
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_region_bounds(int idx, int off_hp, int off_row, int w_hp, int h_row)
+{
+    if (idx < 0 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
+    rack::settings::RackRegion& r = rack::settings::rackspaceRegions[idx];
+    r.offsetHP   = rack::math::clamp(off_hp,  -10000, 10000);
+    r.offsetRow  = rack::math::clamp(off_row, -1000,  1000);
+    r.widthHP    = rack::math::clamp(w_hp,    4,      256);
+    r.heightRows = rack::math::clamp(h_row,   1,      8);
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_region_visible(int idx, int visible)
+{
+    if (idx < 0 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
+    rack::settings::rackspaceRegions[idx].visible = (visible != 0);
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_rename_region(int idx, const char* name)
+{
+    if (idx < 0 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
+    if (name == nullptr) return -2;
+    rack::settings::rackspaceRegions[idx].name = name;
+    return 0;
+}
+
 // JSON dump of current regions + active index. Same one-shot static-string
 // pattern as cardinal_get_patch_json: pointer valid only until next call.
 static std::string g_regions_json_cache;
