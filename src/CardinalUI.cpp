@@ -1327,7 +1327,7 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE
 int cardinal_set_rack_size(int hp, int rows)
 {
-    hp   = rack::math::clamp(hp,   4, 168);
+    hp   = rack::math::clamp(hp,   4, 256);
     rows = rack::math::clamp(rows, 1, 8);
     rack::settings::rackspaceFixed   = true;
     rack::settings::rackspaceWidthHP = hp;
