@@ -1472,8 +1472,74 @@ int cardinal_rename_region(int idx, const char* name)
 {
     if (idx < 0 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
     if (name == nullptr) return -2;
-    rack::settings::rackspaceRegions[idx].name = name;
+    // Composites are auto-named from their members and shouldn't be renamed
+    // directly — otherwise the label drifts out of sync with the composite's
+    // membership.
+    if (rack::settings::rackspaceRegions[idx].kind == "union") return -3;
+    const std::string oldName = rack::settings::rackspaceRegions[idx].name;
+    const std::string newName = name;
+    rack::settings::rackspaceRegions[idx].name = newName;
+    // Update any composite that references this atomic — patch its members
+    // list AND recompute the auto-name so the strip / menu labels stay
+    // accurate. Without this, renaming an atomic would leave composites
+    // pointing at a nonexistent name and RackWidget::step's auto-delete
+    // would nuke them next frame.
+    for (rack::settings::RackRegion& other : rack::settings::rackspaceRegions) {
+        if (other.kind != "union") continue;
+        bool changed = false;
+        for (std::string& m : other.members) {
+            if (m == oldName) { m = newName; changed = true; }
+        }
+        if (changed) {
+            other.name.clear();
+            for (size_t i = 0; i < other.members.size(); ++i) {
+                if (i > 0) other.name += " + ";
+                other.name += other.members[i];
+            }
+        }
+    }
     return 0;
+}
+
+// Add a composite region combining the named atomic members. members_json
+// is a JSON array of strings, e.g. '["Voice","Mixer"]'. Composite is only
+// added if the members exist and their union tiles a rectangle (see
+// settings::resolveRegionBounds). Auto-named as members joined by " + ".
+// Returns the new index, or -1 on parse/validation failure.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_add_composite_region(const char* members_json)
+{
+    if (members_json == nullptr) return -1;
+    json_error_t err;
+    json_t* arr = json_loads(members_json, 0, &err);
+    if (arr == nullptr || !json_is_array(arr)) {
+        if (arr != nullptr) json_decref(arr);
+        return -1;
+    }
+    rack::settings::RackRegion c;
+    c.kind    = "union";
+    c.visible = true;
+    const size_t n = json_array_size(arr);
+    for (size_t i = 0; i < n; ++i) {
+        json_t* item = json_array_get(arr, i);
+        if (json_is_string(item))
+            c.members.push_back(json_string_value(item));
+    }
+    json_decref(arr);
+    if (c.members.size() < 2) return -1;   // composite needs ≥ 2 members
+    // Auto-name: members joined with " + ".
+    for (size_t i = 0; i < c.members.size(); ++i) {
+        if (i > 0) c.name += " + ";
+        c.name += c.members[i];
+    }
+    rack::settings::rackspaceRegions.push_back(c);
+    const int idx = (int) rack::settings::rackspaceRegions.size() - 1;
+    int a, b, w, h;
+    if (!rack::settings::resolveRegionBounds(idx, a, b, w, h)) {
+        rack::settings::rackspaceRegions.pop_back();
+        return -1;
+    }
+    return idx;
 }
 
 // JSON dump of current regions + active index. Same one-shot static-string
