@@ -1304,6 +1304,8 @@ END_NAMESPACE_DISTRHO
 #include <emscripten/emscripten.h>
 #include <cmath>
 #include <app/common.hpp>
+#include <app/ModuleWidget.hpp>
+#include <app/RackWidget.hpp>
 
 extern "C" {
 
@@ -1365,6 +1367,30 @@ int cardinal_browser_visible(void)
     if (s_wasm_ctx == nullptr || s_wasm_ctx->scene == nullptr
         || s_wasm_ctx->scene->browser == nullptr) return 0;
     return s_wasm_ctx->scene->browser->isVisible() ? 1 : 0;
+}
+
+// Shift every module in the rack by (dx, dy) grid units — dx in HP,
+// dy in rows (RACK_GRID_HEIGHT). Used by the JS overlay's left-edge
+// resize so growing/shrinking the rack from the left visually anchors
+// modules to the RIGHT edge instead of the default (Cardinal's rack
+// starts at RACK_OFFSET and grows/shrinks on the right by default).
+// Modules whose new position falls outside the fixed rack after the
+// shift get hidden by Cardinal's own step logic — un-shifting brings
+// them back.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_shift_modules(int dx_hp, int dy_row)
+{
+    if (s_wasm_ctx == nullptr || s_wasm_ctx->scene == nullptr) return -1;
+    rack::contextSet(s_wasm_ctx);
+    const float dx = dx_hp  * rack::app::RACK_GRID_WIDTH;
+    const float dy = dy_row * rack::app::RACK_GRID_HEIGHT;
+    for (rack::app::ModuleWidget* mw : s_wasm_ctx->scene->rack->getModules()) {
+        if (mw) {
+            mw->box.pos.x += dx;
+            mw->box.pos.y += dy;
+        }
+    }
+    return 0;
 }
 
 // Wipe the current patch — engine cleared, no modules, blank rack. The
