@@ -1324,21 +1324,44 @@ extern "C" {
 // reports the outer bounding box (rack + 2*border stroke) so JS can size
 // the CSS quad to match Cardinal's render exactly.
 
+// Multi-region indirection helper: mutate the active region if one exists,
+// so future frames' RackWidget::step publishes the updated fields back into
+// the legacy scalars (otherwise our write is silently overwritten next frame).
+// Returns pointer to the active region or nullptr if there isn't one.
+static rack::settings::RackRegion* activeRackRegionOrNull()
+{
+    const int idx = rack::settings::rackspaceActiveRegion;
+    if (idx < 0 || idx >= (int) rack::settings::rackspaceRegions.size()) return nullptr;
+    return &rack::settings::rackspaceRegions[idx];
+}
+
 EMSCRIPTEN_KEEPALIVE
 int cardinal_set_rack_size(int hp, int rows)
 {
     hp   = rack::math::clamp(hp,   4, 256);
     rows = rack::math::clamp(rows, 1, 8);
-    rack::settings::rackspaceFixed   = true;
-    rack::settings::rackspaceWidthHP = hp;
-    rack::settings::rackspaceRows    = rows;
+    rack::settings::rackspaceFixed = true;
+    if (rack::settings::RackRegion* r = activeRackRegionOrNull()) {
+        r->widthHP    = hp;
+        r->heightRows = rows;
+    }
+    else {
+        rack::settings::rackspaceWidthHP = hp;
+        rack::settings::rackspaceRows    = rows;
+    }
     return 0;
 }
 
 EMSCRIPTEN_KEEPALIVE
 int cardinal_set_border_u(float u)
 {
-    rack::settings::rackspaceBorderU = rack::math::clamp(u, 0.f, 0.5f);
+    const float clamped = rack::math::clamp(u, 0.f, 0.5f);
+    if (rack::settings::RackRegion* r = activeRackRegionOrNull()) {
+        r->borderU = clamped;
+    }
+    else {
+        rack::settings::rackspaceBorderU = clamped;
+    }
     return 0;
 }
 
@@ -1355,6 +1378,122 @@ int cardinal_set_fill_viewport(int on)
     rack::settings::rackspaceFillViewport = (on != 0);
     return 0;
 }
+
+// Move the fixed rack's origin by (offset_hp, offset_row) grid units relative
+// to RACK_OFFSET. Lets a single fixed rack point at different sub-rectangles
+// of the shared infinite rack space — the multi-region feature composes on
+// top by picking which region's offset is currently published.
+//
+// Temporary during Step 1 of the multi-region rollout: exists so JS can
+// exercise the getFiniteRackBox() offset threading in isolation before
+// the region struct + full C API land. Will be superseded by
+// cardinal_set_rack_region(x, y, hp, rows) once regions exist.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_rack_offset(int offset_hp, int offset_row)
+{
+    const int cx = rack::math::clamp(offset_hp,  -10000, 10000);
+    const int cy = rack::math::clamp(offset_row, -1000,  1000);
+    if (rack::settings::RackRegion* r = activeRackRegionOrNull()) {
+        r->offsetHP  = cx;
+        r->offsetRow = cy;
+    }
+    else {
+        rack::settings::rackspaceOffsetHP  = cx;
+        rack::settings::rackspaceOffsetRow = cy;
+    }
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+// Region management API — minimum surface for browser-console verification of
+// the region indirection. The full API (rename, bounds edit, visibility toggle,
+// composite regions) lands with the menu-bar restructure.
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_region_count(void)
+{
+    return (int) rack::settings::rackspaceRegions.size();
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_add_region(const char* name, int off_hp, int off_row,
+                        int w_hp, int h_row, float border_u)
+{
+    rack::settings::RackRegion r;
+    r.kind       = "atomic";
+    r.name       = (name != nullptr) ? name : "";
+    r.offsetHP   = rack::math::clamp(off_hp,  -10000, 10000);
+    r.offsetRow  = rack::math::clamp(off_row, -1000,  1000);
+    r.widthHP    = rack::math::clamp(w_hp,    4,      256);
+    r.heightRows = rack::math::clamp(h_row,   1,      8);
+    r.borderU    = rack::math::clamp(border_u, 0.f,   0.5f);
+    r.visible    = true;
+    rack::settings::rackspaceRegions.push_back(r);
+    return (int) rack::settings::rackspaceRegions.size() - 1;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_set_active_region(int idx)
+{
+    if (idx < -1 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
+    rack::settings::rackspaceActiveRegion = idx;
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int cardinal_delete_region(int idx)
+{
+    if (idx < 0 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
+    rack::settings::rackspaceRegions.erase(rack::settings::rackspaceRegions.begin() + idx);
+    if (rack::settings::rackspaceActiveRegion == idx) {
+        rack::settings::rackspaceActiveRegion =
+            rack::settings::rackspaceRegions.empty() ? -1 : 0;
+    }
+    else if (rack::settings::rackspaceActiveRegion > idx) {
+        rack::settings::rackspaceActiveRegion -= 1;
+    }
+    return 0;
+}
+
+// JSON dump of current regions + active index. Same one-shot static-string
+// pattern as cardinal_get_patch_json: pointer valid only until next call.
+static std::string g_regions_json_cache;
+
+EMSCRIPTEN_KEEPALIVE
+const char* cardinal_list_regions(void)
+{
+    json_t* rootJ = json_object();
+    json_object_set_new(rootJ, "activeRegion", json_integer(rack::settings::rackspaceActiveRegion));
+    json_object_set_new(rootJ, "fixed",        json_boolean(rack::settings::rackspaceFixed));
+    json_t* arrJ = json_array();
+    for (const rack::settings::RackRegion& r : rack::settings::rackspaceRegions) {
+        json_t* rJ = json_object();
+        json_object_set_new(rJ, "kind",       json_string(r.kind.c_str()));
+        json_object_set_new(rJ, "name",       json_string(r.name.c_str()));
+        json_object_set_new(rJ, "offsetHP",   json_integer(r.offsetHP));
+        json_object_set_new(rJ, "offsetRow",  json_integer(r.offsetRow));
+        json_object_set_new(rJ, "widthHP",    json_integer(r.widthHP));
+        json_object_set_new(rJ, "heightRows", json_integer(r.heightRows));
+        json_object_set_new(rJ, "borderU",    json_real(r.borderU));
+        json_object_set_new(rJ, "visible",    json_boolean(r.visible));
+        if (r.kind == "union") {
+            json_t* membersJ = json_array();
+            for (const std::string& m : r.members) {
+                json_array_append_new(membersJ, json_string(m.c_str()));
+            }
+            json_object_set_new(rJ, "members", membersJ);
+        }
+        json_array_append_new(arrJ, rJ);
+    }
+    json_object_set_new(rootJ, "regions", arrJ);
+    char* s = json_dumps(rootJ, JSON_COMPACT);
+    g_regions_json_cache = (s != nullptr) ? s : "{}";
+    if (s != nullptr) free(s);
+    json_decref(rootJ);
+    return g_regions_json_cache.c_str();
+}
+
+// -----------------------------------------------------------------------------
 
 // Returns 1 if the module browser overlay is currently visible. JS uses this
 // on pointerdown to skip its border-drag interception when the browser is
