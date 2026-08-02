@@ -808,7 +808,7 @@ struct RackspaceOffsetRowSlider : ui::Slider {
 
 
 // Create a default region at the current viewport center and set it active.
-// Called when the user toggles "Fixed rack size" ON with no regions defined,
+// Called when the user toggles "Fixed size rack mode" ON with no regions defined,
 // or clicks Add region from the menu. Auto-picks the first unused
 // "Region N" name so the region list stays scannable.
 static void bootstrapDefaultRegion() {
@@ -906,11 +906,11 @@ struct ViewButton : MenuButton {
 		menu->addChild(new ui::MenuSeparator);
 		menu->addChild(createMenuLabel("Rackspace"));
 
-		// Toggling "Fixed rack size" ON with no regions defined auto-creates
+		// Toggling "Fixed size rack mode" ON with no regions defined auto-creates
 		// one at the current viewport centre — otherwise the fixed rack has
 		// nothing to point at and the user just sees an empty frame at
 		// RACK_OFFSET, which is confusing.
-		menu->addChild(createCheckMenuItem("Fixed rack size", "",
+		menu->addChild(createCheckMenuItem("Fixed size rack mode", "",
 			[]() { return settings::rackspaceFixed; },
 			[]() {
 				const bool willEnable = !settings::rackspaceFixed;
@@ -920,6 +920,15 @@ struct ViewButton : MenuButton {
 				}
 			}
 		));
+
+		// Infinite-mode toggle: hide region overlays + gestures so the
+		// infinite grid works as it did before regions existed. Only shown
+		// here (in infinite mode) because it's meaningless with the fixed
+		// rack enforced.
+		if (!settings::rackspaceFixed) {
+			menu->addChild(createBoolPtrMenuItem("Show rack regions", "",
+				&settings::rackspaceShowRegions));
+		}
 
 		if (settings::rackspaceFixed) {
 			const int nRegions = (int) settings::rackspaceRegions.size();
@@ -985,8 +994,6 @@ struct ViewButton : MenuButton {
 				menu->addChild(offYSlider);
 			}
 
-			menu->addChild(createBoolPtrMenuItem("Menu bar inside top border", "",
-				&settings::rackspaceMenuInBorder));
 		}
 
 		menu->addChild(new ui::MenuSeparator);

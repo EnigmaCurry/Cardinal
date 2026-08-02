@@ -1314,9 +1314,8 @@ extern "C" {
 //
 // The wasm-web-demo /overlay/ page floats Cardinal Mini on top of another
 // webapp. It sizes an HTML canvas to a specific rack pixel dimension, then
-// asks Cardinal to (a) fix the rack to a given HP x rows box, (b) draw a
-// wooden border of a given thickness, and (c) optionally sink the menu bar
-// into that top border strip so the whole rendered quad is self-contained.
+// asks Cardinal to fix the rack to a given HP x rows box and draw a wooden
+// border of a given thickness, keeping the rendered quad self-contained.
 //
 // These setters just mutate settings::rackspace* — the Rack code paths
 // (Scene::step, RackWidget::draw, RackScrollWidget::step) read them each
@@ -1362,13 +1361,6 @@ int cardinal_set_border_u(float u)
     else {
         rack::settings::rackspaceBorderU = clamped;
     }
-    return 0;
-}
-
-EMSCRIPTEN_KEEPALIVE
-int cardinal_set_menu_in_border(int on)
-{
-    rack::settings::rackspaceMenuInBorder = (on != 0);
     return 0;
 }
 

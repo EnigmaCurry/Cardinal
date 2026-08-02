@@ -154,20 +154,10 @@ void Scene::step() {
 	// rackScroll cover the full scene, so RackScrollWidget's fill-viewport
 	// autoscale can center the rack symmetrically on all four sides.
 	const bool overlayMode = settings::rackspaceFixed && settings::rackspaceFillViewport;
-	// Menu-in-border overlay mode (legacy — kept in case someone wants the
-	// menu drawn inside the top border strip instead of hidden). Suppressed
-	// when overlayMode is on, since a visible menu wouldn't actually work.
-	const bool menuInBorder = settings::rackspaceFixed && settings::rackspaceMenuInBorder
-	                          && !overlayMode;
 
 	if (overlayMode) {
 		rackScroll->box.pos.y = 0;
 		menuBar->hide();
-	}
-	else if (menuInBorder) {
-		rackScroll->box.pos.y = 0;
-		menuBar->show();
-		menuBar->box.pos.y = 0;
 	}
 	else if (APP->window->isFullScreen()) {
 		// Expand RackScrollWidget to cover entire screen if fullscreen
