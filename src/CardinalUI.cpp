@@ -1344,10 +1344,13 @@ int cardinal_set_rack_size(int hp, int rows)
         r->widthHP    = hp;
         r->heightRows = rows;
     }
-    else {
-        rack::settings::rackspaceWidthHP = hp;
-        rack::settings::rackspaceRows    = rows;
-    }
+    // Always mirror into the legacy scalars — RackWidget::step's per-frame
+    // publish handles this too, but it may run AFTER RackScrollWidget::step
+    // in a given frame, causing a 1-frame lag between JS setting the size
+    // and RackScroll's fill-viewport zoom catching up. Visible as a brief
+    // shrink-then-grow flicker while drag-resizing.
+    rack::settings::rackspaceWidthHP = hp;
+    rack::settings::rackspaceRows    = rows;
     return 0;
 }
 
@@ -1358,9 +1361,7 @@ int cardinal_set_border_u(float u)
     if (rack::settings::RackRegion* r = activeRackRegionOrNull()) {
         r->borderU = clamped;
     }
-    else {
-        rack::settings::rackspaceBorderU = clamped;
-    }
+    rack::settings::rackspaceBorderU = clamped;
     return 0;
 }
 
@@ -1389,10 +1390,9 @@ int cardinal_set_rack_offset(int offset_hp, int offset_row)
         r->offsetHP  = cx;
         r->offsetRow = cy;
     }
-    else {
-        rack::settings::rackspaceOffsetHP  = cx;
-        rack::settings::rackspaceOffsetRow = cy;
-    }
+    // Mirror to legacy too — see cardinal_set_rack_size comment.
+    rack::settings::rackspaceOffsetHP  = cx;
+    rack::settings::rackspaceOffsetRow = cy;
     return 0;
 }
 
@@ -1429,6 +1429,21 @@ int cardinal_set_active_region(int idx)
 {
     if (idx < -1 || idx >= (int) rack::settings::rackspaceRegions.size()) return -1;
     rack::settings::rackspaceActiveRegion = idx;
+    // Immediately publish the new region's bounds into the legacy scalars
+    // so the CURRENT frame renders at the correct size — otherwise there's
+    // a 1-frame gap where JS has switched but Cardinal is still drawing
+    // the previous region's dimensions.
+    if (idx >= 0) {
+        int a, b, w, h;
+        if (rack::settings::resolveRegionBounds(idx, a, b, w, h)) {
+            rack::settings::rackspaceOffsetHP  = a;
+            rack::settings::rackspaceOffsetRow = b;
+            rack::settings::rackspaceWidthHP   = w;
+            rack::settings::rackspaceRows      = h;
+            const rack::settings::RackRegion& r = rack::settings::rackspaceRegions[idx];
+            if (r.kind == "atomic") rack::settings::rackspaceBorderU = r.borderU;
+        }
+    }
     return 0;
 }
 
@@ -1707,6 +1722,15 @@ const char* cardinal_get_patch_json(void)
     }
     return g_patch_json_cache.c_str();
 }
+
+// Cheap getters for the current fixed-rack dimensions in HP / rows. These
+// track whatever the active region publishes into the legacy scalars each
+// frame (see RackWidget::step), so JS can poll them to stay in sync when
+// the user switches active region via Cardinal's own menu.
+EMSCRIPTEN_KEEPALIVE
+int cardinal_get_rack_hp(void)   { return rack::settings::rackspaceWidthHP; }
+EMSCRIPTEN_KEEPALIVE
+int cardinal_get_rack_rows(void) { return rack::settings::rackspaceRows; }
 
 EMSCRIPTEN_KEEPALIVE
 int cardinal_get_rack_pixel_size(int* const w, int* const h)
