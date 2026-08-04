@@ -86,6 +86,7 @@ extern Model* modelNegativeHarmony;
 extern Model* modelEnigmaCurryMixer8;
 extern Model* modelEnigmaCurryTrackerHost;
 extern Model* modelEnigmaCurryWebBridge;
+extern Model* modelBrushedTest;
 
 // Biset — Blank and Tree are in BISET_CUSTOM in plugins/Makefile, so their
 // compile-time -D renames modelBlank → modelBisetBlank and
@@ -727,6 +728,7 @@ static void initStatic__EnigmaCurry()
         p->addModel(modelEnigmaCurryMixer8);
         p->addModel(modelEnigmaCurryTrackerHost);
         p->addModel(modelEnigmaCurryWebBridge);
+        p->addModel(modelBrushedTest);
     }
 }
 

@@ -86,6 +86,7 @@ extern Model* modelNegativeHarmony;
 extern Model* modelEnigmaCurryMixer8;
 extern Model* modelEnigmaCurryTrackerHost;
 extern Model* modelEnigmaCurryWebBridge;
+extern Model* modelBrushedTest;
 
 // Biset — Blank and Tree are in BISET_CUSTOM in plugins/Makefile, so their
 // compile-time -D renames modelBlank → modelBisetBlank and
@@ -726,6 +727,7 @@ static void initStatic__EnigmaCurry()
         spl.removeModule("Mixer8");
         spl.removeModule("TrackerHost");
         spl.removeModule("WebBridge");
+        spl.removeModule("BrushedTest");
     }
 }
 

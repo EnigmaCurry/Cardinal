@@ -1797,7 +1797,8 @@ MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_5.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_6.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_7.svg
 
-# EnigmaCurry — fonts loaded by components.hpp (panels are procedural, no SVG).
+# EnigmaCurry — fonts loaded by components.hpp (panels + panel texture are
+# procedural code, generated at runtime by src/brushed_metal.cpp).
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/manrope/Manrope-Regular.ttf
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/dseg/DSEG14Modern-Regular.ttf
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/Fantasque/FantasqueSansMono-Regular.ttf
@@ -2455,6 +2456,7 @@ MINIPLUGIN_FILES += EnigmaCurry/src/NegativeHarmony.cpp   # [manifest] EnigmaCur
 MINIPLUGIN_FILES += EnigmaCurry/src/Mixer8.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/TrackerHost.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/WebBridge.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/BrushedTest.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += Fundamental/src/WTVCO.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/VCA.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/WTLFO.cpp   # [manifest] Fundamental
