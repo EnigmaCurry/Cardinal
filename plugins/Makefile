@@ -1797,10 +1797,7 @@ MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_5.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_6.svg
 MINIRESOURCE_FILES += surgext/res/xt/glyphs/lt_7.svg
 
-# EnigmaCurry — shared panel templates + fonts loaded by components.hpp.
-MINIRESOURCE_FILES += EnigmaCurry/res/3hp.svg
-MINIRESOURCE_FILES += EnigmaCurry/res/6hp.svg
-MINIRESOURCE_FILES += EnigmaCurry/res/10hp.svg
+# EnigmaCurry — fonts loaded by components.hpp (panels are procedural, no SVG).
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/manrope/Manrope-Regular.ttf
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/dseg/DSEG14Modern-Regular.ttf
 MINIRESOURCE_FILES += EnigmaCurry/res/fonts/Fantasque/FantasqueSansMono-Regular.ttf
