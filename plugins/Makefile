@@ -581,6 +581,13 @@ BIDOO_CUSTOM_PER_FILE = channel channel filterType
 PLUGIN_FILES += $(filter-out Biset/src/plugin.cpp,$(wildcard Biset/src/*.cpp))
 PLUGIN_FILES += $(wildcard Biset/src/*/*.cpp)
 
+# Mini variant: same source globs as the full build minus plugin.cpp,
+# which defines the pack's `Plugin* pluginInstance` and its own init().
+# plugins-mini.cpp defines its own pluginInstance__Biset + initStatic__
+# hook, so the pack's init would double-register.
+MINIPLUGIN_FILES += $(filter-out Biset/src/plugin.cpp,$(wildcard Biset/src/*.cpp))
+MINIPLUGIN_FILES += $(wildcard Biset/src/*/*.cpp)
+
 # modules/types which are present in other plugins
 BISET_CUSTOM = Blank ButtonTrigger Clock Tree TreeDisplay
 
@@ -1182,6 +1189,15 @@ SURGEXT_FLAGS += -I$(abspath ../carla/source/modules)
 # [manifest] MINIPLUGIN_FILES += surgext/src/XTStyle.cpp
 MINIPLUGIN_FILES += surgext-helper/surgext-helper.cpp
 
+# Mini variant: same source globs as the full build minus SurgeXT.cpp,
+# which defines the pack's `Plugin* pluginInstance` and its own init().
+# plugins-mini.cpp defines its own pluginInstance__surgext + initStatic__
+# hook, so the pack's init would double-register.
+# Unused module .cpp files (SurgeXTQuadAD etc.) stay in the archive but
+# get gc-sectioned out at wasm link time because nothing references their
+# model symbols.
+MINIPLUGIN_FILES += $(filter-out surgext/src/SurgeXT.cpp,$(wildcard surgext/src/*.cpp))
+
 # --------------------------------------------------------------
 # unless_modules
 
@@ -1196,6 +1212,21 @@ UNLESS_MODULES_CUSTOM = Selection sign
 PLUGIN_FILES += $(filter-out ValleyAudio/src/Valley.cpp,$(wildcard ValleyAudio/src/*.cpp))
 PLUGIN_FILES += $(wildcard ValleyAudio/src/*/*.cpp)
 PLUGIN_FILES += $(wildcard ValleyAudio/src/*/*/*.cpp)
+
+# Mini variant: same source globs as the full build minus
+#   1. Valley.cpp — plugins-mini.cpp defines its own pluginInstance__ValleyAudio
+#      and initStatic__ hook, so we can't also link the pack's own init.
+#   2. Dexter/, Terrorform/ — these two modules pull in
+#      DexterWavetableROM.hpp / TerrorformWavetableROM.hpp, which reference
+#      BINARY(src_ADD_BANK1_bin) etc. Those symbols come from the pack's .bin
+#      files, which are only in PLUGIN_BINARIES, not MINIPLUGIN_BINARIES.
+#      Under -sERROR_ON_UNDEFINED_SYMBOLS=1 (CardinalMini's dev variant) the
+#      wasm fails to instantiate with `bad export type for src_BASIC_bin`.
+#      To enable Dexter or Terrorform in the mini build, also add their .bin
+#      resources to MINIPLUGIN_BINARIES.
+MINIPLUGIN_FILES += $(filter-out ValleyAudio/src/Valley.cpp,$(wildcard ValleyAudio/src/*.cpp))
+MINIPLUGIN_FILES += $(filter-out $(wildcard ValleyAudio/src/Dexter/*.cpp) $(wildcard ValleyAudio/src/Terrorform/*.cpp),$(wildcard ValleyAudio/src/*/*.cpp))
+MINIPLUGIN_FILES += $(filter-out $(wildcard ValleyAudio/src/Terrorform/WavetableEditor/*.cpp),$(wildcard ValleyAudio/src/*/*/*.cpp))
 
 PLUGIN_BINARIES += ValleyAudio/src/ADD_BANK1.bin
 PLUGIN_BINARIES += ValleyAudio/src/ADD_BANK2.bin
@@ -1540,7 +1571,7 @@ MINIPLUGIN_LIST    += MockbaModular
 MINIPLUGIN_LIST    += surgext
 MINIPLUGIN_LIST    += EnigmaCurry
 MINIPLUGIN_LIST    += ImpromptuModular
-# MINIPLUGIN_LIST    += ValleyAudio
+MINIPLUGIN_LIST    += ValleyAudio
 
 MINIRESOURCE_FILES  = AriaModules/res/components/jack-transparent.svg
 MINIRESOURCE_FILES += AriaModules/res/components/pushbutton-500-off.svg
@@ -1785,6 +1816,18 @@ MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/*.svg)
 MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/*.svg)
 MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/fonts/*.ttf)
 
+# ValleyAudio — Topograph/Plateau widgets pull shared Rogan knobs, PJ jacks,
+# sliders, buttons and fonts from ValleyComponents.hpp. apply-manifest only
+# scans the module's own .cpp for res/ paths, so shared assets referenced
+# from headers must be bundled explicitly here. Bundling the whole res/
+# tree (~4 MB) keeps things maintenance-free if you enable more modules
+# later (algo0.svg for Dexter, TerrorformDark.svg for Terrorform, etc.).
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/v2/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/v2/Med/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/v2/Small/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/*.ttf)
+
 # MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelDark.svg
 # MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelDark.svg
 # MINIRESOURCE_FILES += ValleyAudio/res/LightLEDButton80.svg
@@ -1895,11 +1938,247 @@ MINIRESOURCE_FILES += ImpromptuModular/res/panels/PhraseSeq32.svg   # [manifest]
 MINIRESOURCE_FILES += Fundamental/res/WTVCO.svg   # [manifest] Fundamental
 MINIRESOURCE_FILES += Fundamental/res/VCA.svg   # [manifest] Fundamental
 MINIRESOURCE_FILES += Fundamental/res/WTLFO.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/Delay.svg   # [manifest] Fundamental
 MINIRESOURCE_FILES += Fundamental/res/Mixer.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/8vert.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/Mutes.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/Pulses.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/SEQ3.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/SequentialSwitch1.svg   # [manifest] Fundamental
+MINIRESOURCE_FILES += Fundamental/res/SequentialSwitch2.svg   # [manifest] Fundamental
 MINIRESOURCE_FILES += Fundamental/res/Octave.svg   # [manifest] Fundamental
 MINIRESOURCE_FILES += ImpromptuModular/res/panels/Clocked.svg   # [manifest] ImpromptuModular
 MINIRESOURCE_FILES += ImpromptuModular/res/panels/GateSeq64.svg   # [manifest] ImpromptuModular
 MINIRESOURCE_FILES += ImpromptuModular/res/panels/PhraseSeq32.svg   # [manifest] ImpromptuModular
+# END MODULES-MANIFEST
+
+
+# BEGIN MODULES-MANIFEST packs — added by scripts/apply-manifest.py
+# Enabled packs missing from the pristine MINIPLUGIN_LIST —
+# without these the mini build's resource staging skips their
+# plugin.json and StaticPluginLoader silently drops every module.
+MINIPLUGIN_LIST += Biset   # [manifest]
+# END MODULES-MANIFEST
+
+
+# BEGIN MODULES-MANIFEST bulk res/ — added by scripts/apply-manifest.py
+# Enabled packs Cardinal upstream doesn't curate MINIRESOURCE_FILES
+# for — enumerate every file under <pack>/res so transitively-loaded
+# assets (buttons/knobs/fonts reached via helper widgets, not the
+# module's own source) get bundled into CardinalMini.data. Per-file
+# rather than a bulk directory entry because emscripten's file
+# packager doesn't follow directory symlinks.
+MINIRESOURCE_FILES += Biset/res/Blank-Army.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Blank-Gang.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Blank-Wild.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Blank.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Minus-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Minus.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Play-Pattern-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Play-Pattern.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Play-Simple-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Play-Simple.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Play-Song-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Play-Song.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Plus-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Plus.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Stop-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-Stop.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Matrix-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Matrix.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Pattern-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Pattern.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Timeline-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Timeline.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Tuning-Press.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Button-View-Tuning.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/FT88-Regular.ttf   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Gbu.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Igc-Input-Mono.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Igc-Input-Stereo.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Igc-Output-Spread.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Igc-Output-Stereo.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Igc.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Knob-Big-bg.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Knob-Big.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Knob-Medium-bg.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Knob-Medium.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Knob-Small-bg.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Knob-Small.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Omega3.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Omega6.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Outlet.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Pkm.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Recursive_VF_1.085.ttf   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Regex-Condensed.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Regex-Gate-Condensed.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Regex-Gate.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Regex.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Segfault.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Switch-Off.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Switch-On.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-Clock.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-Control.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-Drum.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-Phase.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-Quant.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-State.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker-Synth.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tracker.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tree-Empty.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tree-Seed.svg   # [manifest] Biset
+MINIRESOURCE_FILES += Biset/res/Tree.svg   # [manifest] Biset
+MINIRESOURCE_FILES += ValleyAudio/res/AmalgamPanelDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/AmalgamPanelLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/DSEG14Classic-Italic.ttf   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/FelinePanelDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/FelinePanelLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/LightLEDButton.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/LightLEDButton80.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/PJ301MDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/PJ301MDarkSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/PJ301MDarkSmallOut.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/PlateauPanelDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/PlateauPanelLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSBlue.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSBlueMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSBlueMedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSBlueSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSBrightRed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSBrightRedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSGreen.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSGreenMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSGreenSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSMustard.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSMustardMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSMustardSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSOrange.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSOrangeMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSOrangeSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSPurple.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSPurpleMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSPurpleSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSRed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSRedMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSRedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSWhiteMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSWhiteMedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSWhiteSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSYellow.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Rogan1PSYellowSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/ShareTechMono-Regular.ttf   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/TerrorformDark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/TerrorformDarkManager.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/TerrorformLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/TerrorformLightManager.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/Topograph.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/TopographPanel.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/TopographPanelWhite.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/UGraphPanel.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/UGraphPanelLight.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo0.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo0Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo1.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo10.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo10Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo11.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo11Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo12.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo12Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo13.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo13Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo14.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo14Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo15.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo15Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo16.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo16Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo17.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo17Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo18.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo18Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo19.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo19Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo1Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo2.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo20.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo20Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo21.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo21Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo22.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo22Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo2Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo3.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo3Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo4.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo4Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo5.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo5Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo6.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo6Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo7.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo7Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo8.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo8Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo9.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/algo9Dark.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/din1451alt.ttf   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/sliderBlue.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/sliderGreen.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/sliderOrange.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/sliderRed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/sliderYellow.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/valleySliderBackground.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PS-bg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PSBrightRed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PSBrightRed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PSOrange-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PSOrange.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PSYellow-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Rogan1PSYellow.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSBlueMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSBlueMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSBlueMedSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSBlueMedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSGreenMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSGreenMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSMed-bg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSMedSmall-bg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSMustardMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSMustardMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSOrangeMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSOrangeMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSPurpleMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSPurpleMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSRedMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSRedMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSWhiteMed-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSWhiteMed.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSWhiteMedSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Med/Rogan1PSWhiteMedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSBlueSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSBlueSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSBrightRedSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSBrightRedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSGreenSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSGreenSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSMustardSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSMustardSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSOrangeSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSOrangeSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSPurpleSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSPurpleSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSRedSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSRedSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSSmall-bg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSWhiteSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSWhiteSmall.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSYellowSmall-fg.svg   # [manifest] ValleyAudio
+MINIRESOURCE_FILES += ValleyAudio/res/v2/Small/Rogan1PSYellowSmall.svg   # [manifest] ValleyAudio
 # END MODULES-MANIFEST
 
 ifeq ($(MOD_BUILD),true)
@@ -2163,17 +2442,41 @@ MINIPLUGIN_FILES += ImpromptuModular/src/PhraseSeq32.cpp   # [manifest] Imprompt
 # BEGIN MODULES-MANIFEST — added by scripts/apply-manifest.py
 # Source files for modules the manifest enabled that Cardinal's
 # pristine mini set didn't compile (extras).
+MINIPLUGIN_FILES += Biset/src/Tracker/Tracker.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerSynth/TrackerSynth.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerDrum/TrackerDrum.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerClock/TrackerClock.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerPhase/TrackerPhase.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerQuant/TrackerQuant.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerState/TrackerState.cpp   # [manifest] Biset
+MINIPLUGIN_FILES += Biset/src/TrackerControl/TrackerControl.cpp   # [manifest] Biset
 MINIPLUGIN_FILES += EnigmaCurry/src/Transport.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/Latch.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/Pulse.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/Range.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/NegativeHarmony.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/Mixer8.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/TrackerHost.cpp   # [manifest] EnigmaCurry
+MINIPLUGIN_FILES += EnigmaCurry/src/WebBridge.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += Fundamental/src/WTVCO.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/VCA.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/WTLFO.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/Delay.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/Mixer.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/8vert.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/Mutes.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/Pulses.cpp   # [manifest] Fundamental
+MINIPLUGIN_FILES += Fundamental/src/SEQ3.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/Octave.cpp   # [manifest] Fundamental
 MINIPLUGIN_FILES += Fundamental/src/dr_wav.c   # [manifest] Fundamental
 MINIPLUGIN_FILES += ImpromptuModular/src/Clocked.cpp   # [manifest] ImpromptuModular
 MINIPLUGIN_FILES += ImpromptuModular/src/GateSeq64.cpp   # [manifest] ImpromptuModular
 MINIPLUGIN_FILES += ImpromptuModular/src/PhraseSeq32.cpp   # [manifest] ImpromptuModular
+MINIPLUGIN_FILES += ValleyAudio/src/Topograph/Topograph.cpp   # [manifest] ValleyAudio
+MINIPLUGIN_FILES += ValleyAudio/src/Plateau/Plateau.cpp   # [manifest] ValleyAudio
+MINIPLUGIN_FILES += surgext/src/Waveshaper.cpp   # [manifest] surgext
+MINIPLUGIN_FILES += surgext/src/LFO.cpp   # [manifest] surgext
+MINIPLUGIN_FILES += surgext/src/Delay.cpp   # [manifest] surgext
 # END MODULES-MANIFEST
 
 MINIPLUGIN_OBJS  = $(MINIPLUGIN_FILES:%=$(BUILD_DIR)/%.o)

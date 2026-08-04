@@ -581,6 +581,13 @@ BIDOO_CUSTOM_PER_FILE = channel channel filterType
 PLUGIN_FILES += $(filter-out Biset/src/plugin.cpp,$(wildcard Biset/src/*.cpp))
 PLUGIN_FILES += $(wildcard Biset/src/*/*.cpp)
 
+# Mini variant: same source globs as the full build minus plugin.cpp,
+# which defines the pack's `Plugin* pluginInstance` and its own init().
+# plugins-mini.cpp defines its own pluginInstance__Biset + initStatic__
+# hook, so the pack's init would double-register.
+MINIPLUGIN_FILES += $(filter-out Biset/src/plugin.cpp,$(wildcard Biset/src/*.cpp))
+MINIPLUGIN_FILES += $(wildcard Biset/src/*/*.cpp)
+
 # modules/types which are present in other plugins
 BISET_CUSTOM = Blank ButtonTrigger Clock Tree TreeDisplay
 
@@ -1182,6 +1189,15 @@ SURGEXT_FLAGS += -I$(abspath ../carla/source/modules)
 # [manifest] MINIPLUGIN_FILES += surgext/src/XTStyle.cpp
 MINIPLUGIN_FILES += surgext-helper/surgext-helper.cpp
 
+# Mini variant: same source globs as the full build minus SurgeXT.cpp,
+# which defines the pack's `Plugin* pluginInstance` and its own init().
+# plugins-mini.cpp defines its own pluginInstance__surgext + initStatic__
+# hook, so the pack's init would double-register.
+# Unused module .cpp files (SurgeXTQuadAD etc.) stay in the archive but
+# get gc-sectioned out at wasm link time because nothing references their
+# model symbols.
+MINIPLUGIN_FILES += $(filter-out surgext/src/SurgeXT.cpp,$(wildcard surgext/src/*.cpp))
+
 # --------------------------------------------------------------
 # unless_modules
 
@@ -1196,6 +1212,21 @@ UNLESS_MODULES_CUSTOM = Selection sign
 PLUGIN_FILES += $(filter-out ValleyAudio/src/Valley.cpp,$(wildcard ValleyAudio/src/*.cpp))
 PLUGIN_FILES += $(wildcard ValleyAudio/src/*/*.cpp)
 PLUGIN_FILES += $(wildcard ValleyAudio/src/*/*/*.cpp)
+
+# Mini variant: same source globs as the full build minus
+#   1. Valley.cpp — plugins-mini.cpp defines its own pluginInstance__ValleyAudio
+#      and initStatic__ hook, so we can't also link the pack's own init.
+#   2. Dexter/, Terrorform/ — these two modules pull in
+#      DexterWavetableROM.hpp / TerrorformWavetableROM.hpp, which reference
+#      BINARY(src_ADD_BANK1_bin) etc. Those symbols come from the pack's .bin
+#      files, which are only in PLUGIN_BINARIES, not MINIPLUGIN_BINARIES.
+#      Under -sERROR_ON_UNDEFINED_SYMBOLS=1 (CardinalMini's dev variant) the
+#      wasm fails to instantiate with `bad export type for src_BASIC_bin`.
+#      To enable Dexter or Terrorform in the mini build, also add their .bin
+#      resources to MINIPLUGIN_BINARIES.
+MINIPLUGIN_FILES += $(filter-out ValleyAudio/src/Valley.cpp,$(wildcard ValleyAudio/src/*.cpp))
+MINIPLUGIN_FILES += $(filter-out $(wildcard ValleyAudio/src/Dexter/*.cpp) $(wildcard ValleyAudio/src/Terrorform/*.cpp),$(wildcard ValleyAudio/src/*/*.cpp))
+MINIPLUGIN_FILES += $(filter-out $(wildcard ValleyAudio/src/Terrorform/WavetableEditor/*.cpp),$(wildcard ValleyAudio/src/*/*/*.cpp))
 
 PLUGIN_BINARIES += ValleyAudio/src/ADD_BANK1.bin
 PLUGIN_BINARIES += ValleyAudio/src/ADD_BANK2.bin
@@ -1540,7 +1571,7 @@ MINIPLUGIN_LIST    += MockbaModular
 MINIPLUGIN_LIST    += surgext
 MINIPLUGIN_LIST    += EnigmaCurry
 MINIPLUGIN_LIST    += ImpromptuModular
-# MINIPLUGIN_LIST    += ValleyAudio
+MINIPLUGIN_LIST    += ValleyAudio
 
 MINIRESOURCE_FILES  = AriaModules/res/components/jack-transparent.svg
 MINIRESOURCE_FILES += AriaModules/res/components/pushbutton-500-off.svg
@@ -1784,6 +1815,18 @@ MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/complib/*.svg)
 MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/*.svg)
 MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/*.svg)
 MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/fonts/*.ttf)
+
+# ValleyAudio — Topograph/Plateau widgets pull shared Rogan knobs, PJ jacks,
+# sliders, buttons and fonts from ValleyComponents.hpp. apply-manifest only
+# scans the module's own .cpp for res/ paths, so shared assets referenced
+# from headers must be bundled explicitly here. Bundling the whole res/
+# tree (~4 MB) keeps things maintenance-free if you enable more modules
+# later (algo0.svg for Dexter, TerrorformDark.svg for Terrorform, etc.).
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/v2/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/v2/Med/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/v2/Small/*.svg)
+MINIRESOURCE_FILES += $(wildcard ValleyAudio/res/*.ttf)
 
 # MINIRESOURCE_FILES += ValleyAudio/res/DexterPanelDark.svg
 # MINIRESOURCE_FILES += ValleyAudio/res/InterzonePanelDark.svg

@@ -84,6 +84,32 @@ extern Model* modelEnigmaCurryPulse;
 extern Model* modelRange;
 extern Model* modelNegativeHarmony;
 extern Model* modelEnigmaCurryMixer8;
+extern Model* modelEnigmaCurryTrackerHost;
+extern Model* modelEnigmaCurryWebBridge;
+
+// Biset — Blank and Tree are in BISET_CUSTOM in plugins/Makefile, so their
+// compile-time -D renames modelBlank → modelBisetBlank and
+// modelTree → modelBisetTree to avoid colliding with other packs.
+extern Model* modelIgc;
+extern Model* modelOmega3;
+extern Model* modelOmega6;
+extern Model* modelGbu;
+extern Model* modelPkm;
+extern Model* modelTracker;
+extern Model* modelTrackerSynth;
+extern Model* modelTrackerDrum;
+extern Model* modelTrackerClock;
+extern Model* modelTrackerPhase;
+extern Model* modelTrackerQuant;
+extern Model* modelTrackerState;
+extern Model* modelTrackerControl;
+extern Model* modelRegex;
+extern Model* modelRegexCondensed;
+extern Model* modelRegexExp;
+extern Model* modelBisetTree;
+extern Model* modelTreeSeed;
+extern Model* modelSegfault;
+extern Model* modelBisetBlank;
 
 // ImpromptuModular — the pack's own ImpromptuModular.cpp is compiled into
 // plugins-mini with -DpluginInstance=pluginInstance__ImpromptuModular, so
@@ -133,6 +159,7 @@ Plugin* pluginInstance__MockbaModular;
 Plugin* pluginInstance__surgext;
 Plugin* pluginInstance__ValleyAudio;
 Plugin* pluginInstance__EnigmaCurry;
+Plugin* pluginInstance__Biset;
 // Not defined here — ImpromptuModular.cpp already defines it via the
 // per-file -DpluginInstance=pluginInstance__ImpromptuModular rename.
 extern Plugin* pluginInstance__ImpromptuModular;
@@ -298,26 +325,26 @@ static void initStatic__Fundamental()
     {
         p->addModel(modelADSR);
         p->addModel(modelLFO);
-        spl.removeModule("Merge");
-        spl.removeModule("MidSide");
-        spl.removeModule("Noise");
-        spl.removeModule("Quantizer");
-        spl.removeModule("Random");
+        p->addModel(modelMerge);
+        p->addModel(modelMidSide);
+        p->addModel(modelNoise);
+        p->addModel(modelQuantizer);
+        p->addModel(modelRandom);
         p->addModel(modelScope);
-        spl.removeModule("Split");
-        spl.removeModule("Sum");
+        p->addModel(modelSplit);
+        p->addModel(modelSum);
         p->addModel(modelVCA_1);
         p->addModel(modelVCF);
-        spl.removeModule("VCMixer");
+        p->addModel(modelVCMixer);
         p->addModel(modelVCO);
-        spl.removeModule("8vert");
-        spl.removeModule("Delay");
+        p->addModel(model_8vert);
+        p->addModel(modelDelay);
         p->addModel(modelLFO2);
         p->addModel(modelMixer);
-        spl.removeModule("Mutes");
+        p->addModel(modelMutes);
         p->addModel(modelOctave);
-        spl.removeModule("Pulses");
-        spl.removeModule("SEQ3");
+        p->addModel(modelPulses);
+        p->addModel(modelSEQ3);
         spl.removeModule("SequentialSwitch1");
         spl.removeModule("SequentialSwitch2");
         p->addModel(modelVCA);
@@ -609,7 +636,7 @@ static void initStatic__surgext()
         p->addModel(modelSurgeLFO);
         p->addModel(modelSurgeMixer);
         p->addModel(modelSurgeMixerSlider);
-        p->addModel(modelSurgeModMatrix);
+        spl.removeModule("SurgeXTModMatrix");
         p->addModel(modelSurgeWaveshaper);
         /*
         p->addModel(modelSurgeDelay);
@@ -618,7 +645,7 @@ static void initStatic__surgext()
         p->addModel(modelSurgeDigitalRingMods);
         p->addModel(modelSurgeVCF);
         */
-        spl.removeModule("SurgeXTDelay");
+        p->addModel(modelSurgeDelay);
         spl.removeModule("SurgeXTDelayLineByFreq");
         spl.removeModule("SurgeXTDelayLineByFreqExpanded");
         spl.removeModule("SurgeXTDigitalRingMod");
@@ -663,7 +690,6 @@ static void initStatic__surgext()
     }
 }
 
-/*
 static void initStatic__ValleyAudio()
 {
     Plugin* const p = new Plugin;
@@ -672,18 +698,17 @@ static void initStatic__ValleyAudio()
     const StaticPluginLoader spl(p, "ValleyAudio");
     if (spl.ok())
     {
-        p->addModel(modelDexter);
-        p->addModel(modelInterzone);
+        spl.removeModule("Dexter");
+        spl.removeModule("Interzone");
 
         spl.removeModule("Amalgam");
         spl.removeModule("Feline");
-        spl.removeModule("Plateau");
+        p->addModel(modelPlateau);
         spl.removeModule("Terrorform");
-        spl.removeModule("Topograph");
+        p->addModel(modelTopograph);
         spl.removeModule("uGraph");
     }
 }
-*/
 
 static void initStatic__EnigmaCurry()
 {
@@ -694,12 +719,47 @@ static void initStatic__EnigmaCurry()
     if (spl.ok())
     {
         p->addModel(modelTransport);
-        spl.removeModule("Latch");
-        spl.removeModule("Pulse");
-        spl.removeModule("Range");
-        spl.removeModule("NegativeHarmony");
+        p->addModel(modelLatch);
+        p->addModel(modelEnigmaCurryPulse);
+        p->addModel(modelRange);
+        p->addModel(modelNegativeHarmony);
         // Toggled by scripts/apply-manifest.py based on modules.toml.
         p->addModel(modelEnigmaCurryMixer8);
+        p->addModel(modelEnigmaCurryTrackerHost);
+        p->addModel(modelEnigmaCurryWebBridge);
+    }
+}
+
+static void initStatic__Biset()
+{
+    Plugin* const p = new Plugin;
+    pluginInstance__Biset = p;
+
+    const StaticPluginLoader spl(p, "Biset");
+    if (spl.ok())
+    {
+        // All 20 modules registered here; scripts/apply-manifest.py
+        // toggles each to spl.removeModule("slug") based on modules.toml.
+        spl.removeModule("Biset-Igc");
+        spl.removeModule("Biset-Omega3");
+        spl.removeModule("Biset-Omega6");
+        spl.removeModule("Biset-Gbu");
+        spl.removeModule("Biset-Pkm");
+        p->addModel(modelTracker);
+        p->addModel(modelTrackerSynth);
+        p->addModel(modelTrackerDrum);
+        p->addModel(modelTrackerClock);
+        p->addModel(modelTrackerPhase);
+        p->addModel(modelTrackerQuant);
+        p->addModel(modelTrackerState);
+        p->addModel(modelTrackerControl);
+        spl.removeModule("Biset-Regex");
+        spl.removeModule("Biset-Regex-Condensed");
+        spl.removeModule("Biset-Regex-Exp");
+        spl.removeModule("Biset-Tree");
+        spl.removeModule("Biset-Tree-Seed");
+        spl.removeModule("Biset-Segfault");
+        spl.removeModule("Biset-Blank");
     }
 }
 
@@ -749,10 +809,13 @@ void initStaticPlugins()
     // BEGIN MODULES-MANIFEST — regenerated by scripts/apply-manifest.py
     // Manifest-selected packs. Edit modules.toml and re-run
     // `just configure-modules` to change this list.
+    initStatic__Biset();
     initStatic__Cardinal();
     initStatic__EnigmaCurry();
     initStatic__Fundamental();
     initStatic__ImpromptuModular();
+    initStatic__ValleyAudio();
+    initStatic__surgext();
     // END MODULES-MANIFEST
 }
 
@@ -768,6 +831,7 @@ void updateStaticPluginsDarkMode()
     // BEGIN MODULES-MANIFEST updateStaticPluginsDarkMode
     const bool darkMode = settings::preferDarkPanels;
     (void)darkMode;
+    surgext_rack_update_theme();
     // END MODULES-MANIFEST
 }
 
