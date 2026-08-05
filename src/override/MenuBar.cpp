@@ -926,7 +926,7 @@ struct ViewButton : MenuButton {
 		// here (in infinite mode) because it's meaningless with the fixed
 		// rack enforced.
 		if (!settings::rackspaceFixed) {
-			menu->addChild(createBoolPtrMenuItem("Show rack regions", "",
+			menu->addChild(createBoolPtrMenuItem("Edit rack regions", "",
 				&settings::rackspaceShowRegions));
 		}
 
