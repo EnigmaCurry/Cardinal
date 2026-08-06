@@ -726,7 +726,7 @@ static void initStatic__EnigmaCurry()
         p->addModel(modelNegativeHarmony);
         // Toggled by scripts/apply-manifest.py based on modules.toml.
         p->addModel(modelEnigmaCurryMixer8);
-        p->addModel(modelEnigmaCurryTrackerHost);
+        spl.removeModule("TrackerHost");
         p->addModel(modelEnigmaCurryWebBridge);
         p->addModel(modelBrushedTest);
     }

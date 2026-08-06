@@ -2454,7 +2454,6 @@ MINIPLUGIN_FILES += EnigmaCurry/src/Pulse.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/Range.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/NegativeHarmony.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/Mixer8.cpp   # [manifest] EnigmaCurry
-MINIPLUGIN_FILES += EnigmaCurry/src/TrackerHost.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/WebBridge.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += EnigmaCurry/src/BrushedTest.cpp   # [manifest] EnigmaCurry
 MINIPLUGIN_FILES += Fundamental/src/WTVCO.cpp   # [manifest] Fundamental
