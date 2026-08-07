@@ -84,6 +84,7 @@ extern Model* modelEnigmaCurryPulse;
 extern Model* modelRange;
 extern Model* modelNegativeHarmony;
 extern Model* modelEnigmaCurryMixer8;
+extern Model* modelEnigmaCurryTracker;
 extern Model* modelEnigmaCurryTrackerHost;
 extern Model* modelEnigmaCurryWebBridge;
 extern Model* modelBrushedTest;
@@ -725,6 +726,7 @@ static void initStatic__EnigmaCurry()
         spl.removeModule("NegativeHarmony");
         // Toggled by scripts/apply-manifest.py based on modules.toml.
         spl.removeModule("Mixer8");
+        spl.removeModule("Tracker");
         spl.removeModule("TrackerHost");
         spl.removeModule("WebBridge");
         spl.removeModule("BrushedTest");

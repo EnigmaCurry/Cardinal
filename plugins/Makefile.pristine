@@ -719,6 +719,46 @@ MINIPLUGIN_FILES += $(filter-out EnigmaCurry/src/plugin.cpp,$(wildcard EnigmaCur
 # modules/types which are present in other plugins
 ENIGMACURRY_CUSTOM = Pulse
 
+# libopenmpt vendored source (BSD-3, powers the Tracker module).
+# ~5MB, ~150 .cpp files. Kept in its own subtree with its own compile
+# flags so the C++17 requirement doesn't leak into the rest of the
+# EnigmaCurry pack. Tracker.cpp itself needs the same flags because it
+# includes libopenmpt's public headers.
+ENIGMACURRY_LIBOPENMPT_DIR = EnigmaCurry/src/libopenmpt
+ENIGMACURRY_LIBOPENMPT_CXX = \
+    $(wildcard $(ENIGMACURRY_LIBOPENMPT_DIR)/common/*.cpp) \
+    $(wildcard $(ENIGMACURRY_LIBOPENMPT_DIR)/soundlib/*.cpp) \
+    $(wildcard $(ENIGMACURRY_LIBOPENMPT_DIR)/soundlib/plugins/*.cpp) \
+    $(wildcard $(ENIGMACURRY_LIBOPENMPT_DIR)/soundlib/plugins/dmo/*.cpp) \
+    $(wildcard $(ENIGMACURRY_LIBOPENMPT_DIR)/sounddsp/*.cpp) \
+    $(wildcard $(ENIGMACURRY_LIBOPENMPT_DIR)/libopenmpt/*.cpp)
+ENIGMACURRY_LIBOPENMPT_C = $(ENIGMACURRY_LIBOPENMPT_DIR)/include/miniz/miniz.c
+
+PLUGIN_FILES     += $(ENIGMACURRY_LIBOPENMPT_CXX) $(ENIGMACURRY_LIBOPENMPT_C)
+MINIPLUGIN_FILES += $(ENIGMACURRY_LIBOPENMPT_CXX) $(ENIGMACURRY_LIBOPENMPT_C)
+
+# Compile flags used by both libopenmpt sources AND Tracker.cpp. Adds
+# C++17, the required include roots, and a MPT_WITH_MINIZ define so the
+# vendored miniz.c is wired into the archive-support path. Warnings that
+# fire only inside libopenmpt (its style differs from ours) are silenced.
+ENIGMACURRY_LIBOPENMPT_FLAGS  = -std=gnu++17
+# LIBOPENMPT_BUILD is required by common/BuildSettings.h; it selects the
+# library variant (vs. MODPLUG_TRACKER, which would enable the app UI
+# codepaths). It also auto-enables NO_AGC / NO_DSP / NO_EQ, which skip
+# legacy libmodplug code that still references Windows types (UINT,
+# DWORD) — those are dead code in a plain playback library.
+ENIGMACURRY_LIBOPENMPT_FLAGS += -DLIBOPENMPT_BUILD
+ENIGMACURRY_LIBOPENMPT_FLAGS += -DMPT_WITH_MINIZ
+ENIGMACURRY_LIBOPENMPT_FLAGS += -I$(ENIGMACURRY_LIBOPENMPT_DIR)
+ENIGMACURRY_LIBOPENMPT_FLAGS += -I$(ENIGMACURRY_LIBOPENMPT_DIR)/common
+ENIGMACURRY_LIBOPENMPT_FLAGS += -I$(ENIGMACURRY_LIBOPENMPT_DIR)/src
+ENIGMACURRY_LIBOPENMPT_FLAGS += -I$(ENIGMACURRY_LIBOPENMPT_DIR)/soundlib
+ENIGMACURRY_LIBOPENMPT_FLAGS += -I$(ENIGMACURRY_LIBOPENMPT_DIR)/libopenmpt
+ENIGMACURRY_LIBOPENMPT_FLAGS += -I$(ENIGMACURRY_LIBOPENMPT_DIR)/include
+ENIGMACURRY_LIBOPENMPT_FLAGS += -Wno-unused-parameter -Wno-unused-variable
+ENIGMACURRY_LIBOPENMPT_FLAGS += -Wno-sign-compare -Wno-implicit-fallthrough
+ENIGMACURRY_LIBOPENMPT_FLAGS += -Wno-unused-but-set-variable
+
 # --------------------------------------------------------------
 # ESeries
 
@@ -2482,6 +2522,32 @@ $(BUILD_DIR)/eightfold/src/%.cpp.o: eightfold/src/%.cpp
 	$(SILENT)$(CXX) $< $(EIGHTFOLD_FLAGS) -c -o $@ \
 		$(foreach m,$(EIGHTFOLD_CUSTOM),$(call custom_module_names,$(m),eightfold)) \
 		-DpluginInstance=pluginInstance__eightfold
+
+# libopenmpt subtree: more-specific pattern than EnigmaCurry/src/%.cpp.o,
+# so make's shortest-stem rule picks this for anything under
+# EnigmaCurry/src/libopenmpt/. C++17, libopenmpt include paths, and the
+# gnu++11 default filtered out to avoid a duplicate -std= flag.
+$(BUILD_DIR)/EnigmaCurry/src/libopenmpt/%.cpp.o: EnigmaCurry/src/libopenmpt/%.cpp
+	-@mkdir -p "$(shell dirname $(BUILD_DIR)/$<)"
+	@echo "Compiling $<"
+	$(SILENT)$(CXX) $< $(filter-out -std=gnu++11,$(BUILD_CXX_FLAGS)) $(ENIGMACURRY_LIBOPENMPT_FLAGS) -c -o $@
+
+# miniz is C, not C++. Uses BUILD_C_FLAGS directly since libopenmpt's
+# amalgamated include of it only needs -DMPT_WITH_MINIZ.
+$(BUILD_DIR)/EnigmaCurry/src/libopenmpt/%.c.o: EnigmaCurry/src/libopenmpt/%.c
+	-@mkdir -p "$(shell dirname $(BUILD_DIR)/$<)"
+	@echo "Compiling $<"
+	$(SILENT)$(CC) $< $(BUILD_C_FLAGS) -DMPT_WITH_MINIZ -c -o $@
+
+# Tracker.cpp #includes libopenmpt's C++17 public headers, so compile it
+# with the libopenmpt flags. Explicit target wins over the pattern rule
+# below for anything else in EnigmaCurry/src/.
+$(BUILD_DIR)/EnigmaCurry/src/Tracker.cpp.o: EnigmaCurry/src/Tracker.cpp
+	-@mkdir -p "$(shell dirname $(BUILD_DIR)/$<)"
+	@echo "Compiling $<"
+	$(SILENT)$(CXX) $< $(filter-out -std=gnu++11,$(BUILD_CXX_FLAGS)) $(ENIGMACURRY_LIBOPENMPT_FLAGS) -c -o $@ \
+		-DpluginInstance=pluginInstance__EnigmaCurry \
+		-Wno-misleading-indentation
 
 $(BUILD_DIR)/EnigmaCurry/src/%.cpp.o: EnigmaCurry/src/%.cpp
 	-@mkdir -p "$(shell dirname $(BUILD_DIR)/$<)"
